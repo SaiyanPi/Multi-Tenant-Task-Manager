@@ -8,8 +8,9 @@ namespace MultiTenantTaskManager.Models
         public Guid Id { get; set; } = Guid.NewGuid();
         public string Name { get; set; } = string.Empty;
         public string? Domain { get; set; } // optional: for subdomain-based resolution
-        
+
         // Collection navigation property
         public ICollection<ApplicationUser> Users { get; set; } = new List<ApplicationUser>();
+        public ICollection<Project> Projects { get; set; } = new List<Project>();
     }
 }
