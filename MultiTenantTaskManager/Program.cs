@@ -6,6 +6,7 @@ using MultiTenantTaskManager.Accessor;
 using MultiTenantTaskManager.Authentication;
 using MultiTenantTaskManager.Data;
 using MultiTenantTaskManager.Middleware;
+using MultiTenantTaskManager.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -44,6 +45,7 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddScoped<ITenantAccessor, TenantAccessor>();
+builder.Services.AddScoped<ITenantService, TenantService>();
 
 var app = builder.Build();
 

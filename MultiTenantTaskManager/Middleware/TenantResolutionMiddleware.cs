@@ -10,6 +10,27 @@ public class TenantResolutionMiddleware(RequestDelegate next)
     public async Task InvokeAsync(HttpContext context, ITenantAccessor tenantAccessor,
     ApplicationDbContext dbContext)
     {
+        // following code is commented because it is not feasible to Hardcode Middleware Exceptions for 
+        // Every Tenant Endpoint
+
+        // // Allow open endpoints like tenant creation
+        // var path = context.Request.Path.Value?.ToLower();
+        // if (path != null && path.StartsWith("/api/tenant") && context.Request.Method == "POST")
+        // {
+        //     // Skip tenant resolution for tenant management endpoints
+        //     await next(context);
+        //     return;
+        // }
+
+        // Check if the endpoint has the SkipTenantResolution attribute
+        var endpoint = context.GetEndpoint();
+        var skipTenantResolution = endpoint?.Metadata.GetMetadata<SkipTenantResolutionAttribute>() != null;
+        if (skipTenantResolution)
+        {
+            await next(context);
+            return;
+        }
+
         // if (context.Request.Headers.TryGetValue("X-Tenant-ID", out var tenantIdHeader) &&
         //     Guid.TryParse(tenantIdHeader, out var tenantId))
         // {

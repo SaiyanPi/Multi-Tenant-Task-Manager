@@ -7,6 +7,7 @@ namespace MultiTenantTaskManager.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[SkipTenantResolution] // This attribute allows skipping tenant resolution for this controller
 public class TenantController : ControllerBase
 {
     private readonly ITenantService _tenantService;
