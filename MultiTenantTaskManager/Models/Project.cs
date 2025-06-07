@@ -10,7 +10,7 @@ public class Project
     // Foreign key to Tenant
     public Guid TenantId { get; set; }
     // Reference navigation property to Tenant
-    public Tenant Tenant { get; set; } = null!;
+    public Tenant? Tenant { get; set; } = null!;
     
 
     // Collection navigation property for related TaskItems

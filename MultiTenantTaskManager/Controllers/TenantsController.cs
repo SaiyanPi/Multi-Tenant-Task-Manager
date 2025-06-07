@@ -8,15 +8,15 @@ namespace MultiTenantTaskManager.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [SkipTenantResolution] // This attribute allows skipping tenant resolution for this controller
-public class TenantController : ControllerBase
+public class TenantsController : ControllerBase
 {
     private readonly ITenantService _tenantService;
-    public TenantController(ITenantService tenantService)
+    public TenantsController(ITenantService tenantService)
     {
         _tenantService = tenantService ?? throw new ArgumentNullException(nameof(tenantService));
     }
 
-    // GET:/api/tenant
+    // GET:/api/tenants
     [HttpGet]
     public async Task<ActionResult<IEnumerable<Tenant>>> GetAllTenants()
     {
@@ -25,7 +25,7 @@ public class TenantController : ControllerBase
         return Ok(tenants);
     }
 
-    // GET:/api/tenant/{id}
+    // GET:/api/tenants/{id}
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<Tenant>> GetTenantById(Guid id)
     {
@@ -35,7 +35,7 @@ public class TenantController : ControllerBase
         return Ok(tenant);
     }
 
-    // POST:/api/tenant
+    // POST:/api/tenants
     [HttpPost]
     public async Task<ActionResult<Tenant>> CreateTenant([FromBody] Tenant tenant)
     {
@@ -45,7 +45,7 @@ public class TenantController : ControllerBase
         return CreatedAtAction(nameof(GetTenantById), new { id = createdTenant.Id }, createdTenant);
     }
 
-    // PUT:/api/tenant/{id}
+    // PUT:/api/tenants/{id}
     [HttpPut("{id:guid}")]
     public async Task<ActionResult<Tenant>> UpdateTenant(Guid id, [FromBody] Tenant tenant)
     {
@@ -64,7 +64,7 @@ public class TenantController : ControllerBase
         }
     }
 
-    // DELETE:/api/tenant/{id}
+    // DELETE:/api/tenants/{id}
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> DeleteTenant(Guid id)
     {

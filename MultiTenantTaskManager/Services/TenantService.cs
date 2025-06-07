@@ -16,6 +16,7 @@ public class TenantService : ITenantService
     public async Task<IEnumerable<Tenant>> GetAllTenantsAsync()
     {
         return await _context.Tenants
+            .Include(t => t.Projects) // This eagerly loads the related projects
             .AsNoTracking()
             .ToListAsync();
     }
@@ -23,6 +24,7 @@ public class TenantService : ITenantService
     public async Task<Tenant?> GetTenantByIdAsync(Guid tenantId)
     {
         return await _context.Tenants
+            .Include(t => t.Projects) // This eagerly loads the related projects
             .AsNoTracking()
             .FirstOrDefaultAsync(t => t.Id == tenantId);
     }
