@@ -26,7 +26,7 @@ public class ProjectsController : ControllerBase
 
     // GET:/api/projects/{id}
     [HttpGet("{id}")]
-    public async Task<ActionResult<Project>> GetTenantById(int id)
+    public async Task<ActionResult<Project>> GetProjectById(int id)
     {
         var project = await _projectService.GetProjectByIdAsync(id);
         if (project == null) return NotFound($"Project with ID {id} not found.");
@@ -36,7 +36,7 @@ public class ProjectsController : ControllerBase
 
     // POST:/api/projects
     [HttpPost]
-    public async Task<ActionResult<Project>> CreateTenant([FromBody] Project project)
+    public async Task<ActionResult<Project>> CreateProject([FromBody] Project project)
     {
         if (!ModelState.IsValid) return BadRequest(ModelState);
 
@@ -46,7 +46,7 @@ public class ProjectsController : ControllerBase
         try
         {
             var createdProject = await _projectService.CreateProjectAsync(project);
-            return CreatedAtAction(nameof(GetTenantById), new { id = createdProject.Id }, createdProject);
+            return CreatedAtAction(nameof(GetProjectById), new { id = createdProject.Id }, createdProject);
         }
         catch (InvalidOperationException ex)
         {
@@ -62,7 +62,7 @@ public class ProjectsController : ControllerBase
 
     // PUT:/api/projects/{id}
     [HttpPut("{id}")]
-    public async Task<ActionResult<Project>> UpdateTenant(int id, [FromBody] Project project)
+    public async Task<ActionResult<Project>> UpdateProject(int id, [FromBody] Project project)
     {
         if (!ModelState.IsValid) return BadRequest(ModelState);
 
