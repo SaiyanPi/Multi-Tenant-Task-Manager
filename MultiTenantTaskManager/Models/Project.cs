@@ -16,5 +16,4 @@ public class Project
     // Collection navigation property for related TaskItems
     public ICollection<TaskItem> Tasks { get; set; } = new List<TaskItem>();
     
-    
 }

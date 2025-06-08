@@ -54,6 +54,7 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddScoped<ITenantAccessor, TenantAccessor>();
 builder.Services.AddScoped<ITenantService, TenantService>();
 builder.Services.AddScoped<IProjectService, ProjectService>();
+builder.Services.AddScoped<ITaskItemService, TaskItemService>();
 
 var app = builder.Build();
 

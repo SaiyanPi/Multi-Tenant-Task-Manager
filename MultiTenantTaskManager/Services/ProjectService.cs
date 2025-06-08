@@ -18,8 +18,9 @@ public class ProjectService : IProjectService
     public async Task<IEnumerable<Project>> GetAllProjectsAsync()
     {
         return await _context.Projects
-            .AsNoTracking()
             .Where(p => p.TenantId == _tenantAccessor.TenantId)
+            .Include(p => p.Tasks)
+            .AsNoTracking()
             .ToListAsync();
     }
 
