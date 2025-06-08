@@ -19,8 +19,10 @@ builder.Services
         {
             options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
         });;
+
 builder.Services.AddDbContext<ApplicationDbContext>();
 builder.Services.AddIdentityCore<ApplicationUser>()
+    .AddRoles<IdentityRole>()
     .AddEntityFrameworkStores<ApplicationDbContext>()
     .AddDefaultTokenProviders();
 builder.Services.AddAuthentication(options =>
@@ -73,6 +75,30 @@ app.UseMiddleware<TenantResolutionMiddleware>();
 app.UseAuthentication();
 
 app.UseAuthorization();
+
+// check if the roles exist in database table AspNetRoles, if no then create them as follows.
+using (var serviceScope = app.Services.CreateScope())
+{
+    var services = serviceScope.ServiceProvider;
+
+    // Ensure the database is created.
+    var dbContext = services.GetRequiredService<ApplicationDbContext>();
+    dbContext.Database.EnsureCreated();
+
+    var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
+    if (!await roleManager.RoleExistsAsync(AppRoles.Admin))
+    {
+        await roleManager.CreateAsync(new IdentityRole(AppRoles.Admin));
+    }
+    if (!await roleManager.RoleExistsAsync(AppRoles.Manager))
+    {
+        await roleManager.CreateAsync(new IdentityRole(AppRoles.Manager));
+    }
+    if (!await roleManager.RoleExistsAsync(AppRoles.Member))
+    {
+        await roleManager.CreateAsync(new IdentityRole(AppRoles.Member));
+    }
+}
 
 app.MapControllers();
 
