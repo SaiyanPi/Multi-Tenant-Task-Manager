@@ -39,10 +39,4 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             // directly because we already have cascade delete from Tenant->Project->TaskItem
     }
     
-    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-    {
-        base.OnConfiguring(optionsBuilder);
-        optionsBuilder.UseSqlServer(configuration.GetConnectionString("DefaultConnection"),
-            b => b.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery));
-    }
 }

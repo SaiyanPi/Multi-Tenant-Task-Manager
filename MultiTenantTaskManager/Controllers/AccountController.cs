@@ -75,6 +75,36 @@ public class AccountController : ControllerBase
 
             if (userResult.Succeeded && roleResult.Succeeded)
             {
+                // Store custom claims in the AspNetUserClaims table
+                var claimsToAdd = new List<Claim>
+                {
+                    // Every user gets a tenant_id claim
+                    new("tenant_id", user.TenantId.ToString())
+                };
+
+                // Based on role, assign relevant claim permissions
+                if (roleName == AppRoles.Admin)
+                {
+                    claimsToAdd.Add(new Claim(AppClaimTypes.can_create_delete_tenant, "true"));
+                    claimsToAdd.Add(new Claim(AppClaimTypes.can_create_delete_project, "true"));
+                    claimsToAdd.Add(new Claim(AppClaimTypes.can_create_delete_task, "true"));
+                }
+                else if (roleName == AppRoles.Manager)
+                {
+                    claimsToAdd.Add(new Claim(AppClaimTypes.can_create_delete_project, "true"));
+                    claimsToAdd.Add(new Claim(AppClaimTypes.can_create_delete_task, "true"));
+                }
+                else if (roleName == AppRoles.Member)
+                {
+                    claimsToAdd.Add(new Claim(AppClaimTypes.can_create_delete_task, "true"));
+                }
+
+                foreach (var claim in claimsToAdd)
+                {
+                    await _userManager.AddClaimAsync(user, claim);
+                }
+
+                // finally response
                 return Ok("User registered successfully.");
             }
 
@@ -119,20 +149,31 @@ public class AccountController : ControllerBase
         {
             throw new ApplicationException("Jwt is not set in the configuration");
         }
-        
-        var userRoles = await _userManager.GetRolesAsync(user);
 
+        // 1. Get built-in claims
         var claims = new List<Claim>
         {
-            new(JwtRegisteredClaimNames.Sub, user.Id),
-            new(JwtRegisteredClaimNames.Email, user.Email ?? string.Empty),
-            new("tenant_id", user.TenantId.ToString())
+            // new(JwtRegisteredClaimNames.Sub, user.Id),
+            // new(JwtRegisteredClaimNames.Email, user.Email ?? string.Empty),
+            // new("tenant_id", user.TenantId.ToString())
+            new(ClaimTypes.NameIdentifier, user.Id),
+            new(ClaimTypes.Email, user.Email ?? string.Empty),
+            new("tenant_id", user.TenantId.ToString())  // custom tenant claim
         };
 
-        //  Add role claims
+        // 2. Add role claims
+        var userRoles = await _userManager.GetRolesAsync(user);
         claims.AddRange(userRoles.Select(role => new Claim(ClaimTypes.Role, role)));
 
+        // 3. Add custom claims stored in DB
+        var dbClaims = await _userManager.GetClaimsAsync(user);
+        claims.AddRange(dbClaims.Where(c => 
+            c.Type != ClaimTypes.Role && 
+            c.Type != ClaimTypes.Email && 
+            c.Type != ClaimTypes.NameIdentifier && 
+            c.Type != "tenant_id")); // Avoid duplication
 
+        // 4. Sign and issue token
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
