@@ -1,6 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
@@ -54,6 +55,7 @@ public class AccountController : ControllerBase
 
     // [HttpPost("register")]
     // [SkipTenantResolution] 
+    [Authorize(Policy = "SameTenantPolicy")]
     public async Task<IActionResult> RegisterUserWithRole([FromBody] RegisterDto model, string roleName)
     {
         if (ModelState.IsValid)
@@ -131,23 +133,30 @@ public class AccountController : ControllerBase
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginDto model)
     {
-        if (ModelState.IsValid)
-        {
-            
-            var user = await _userManager.FindByEmailAsync(model.Email);
-            if (user != null)
-            {
-                if (await _userManager.CheckPasswordAsync(user, model.Password))
-                {
-                    var token = GenerateJwtToken(user);
-                    return Ok(new { token });
-                }
-            }
-        // If the user is not found, display an error message
-        ModelState.AddModelError("", "Invalid username or password");
-        }
+        if (!ModelState.IsValid)
+            return BadRequest(new { message = "Invalid request data.", errors = ModelState });
 
-        return BadRequest(ModelState);
+        // Read tenant ID from header
+        var headerTenantId = HttpContext.Request.Headers["X-Tenant-ID"].ToString();
+        if (string.IsNullOrWhiteSpace(headerTenantId))
+            return BadRequest(new { message = "Tenant ID is required in the 'X-Tenant-ID' header." });
+
+        var user = await _userManager.FindByEmailAsync(model.Email);
+        if (user == null)
+            return Unauthorized(new { message = "Invalid email or password." });
+
+        var isPasswordValid = await _userManager.CheckPasswordAsync(user, model.Password);
+        if (!isPasswordValid)
+            return Unauthorized(new { message = "Invalid email or password." });
+
+        // Validate tenant match
+        var userTenantId = user.TenantId.ToString();
+        if (!string.Equals(userTenantId, headerTenantId, StringComparison.OrdinalIgnoreCase))
+            return Forbid("Tenant mismatch: You are not authorized to log in to this tenant.");
+
+        var token = GenerateJwtToken(user);
+
+        return Ok(new { token });
     }
 
     private async Task<string?> GenerateJwtToken(ApplicationUser user)

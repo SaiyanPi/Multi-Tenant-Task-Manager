@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -69,11 +70,15 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("CanManageTasks", policy =>
         policy.RequireClaim(AppClaimTypes.can_create_delete_task, "true"));
 
-    // since everyone can view tasks, we could make it anonymous without a policy
-    // options.AddPolicy("CanViewTasks", policy =>
-    //     policy.RequireClaim(AppClaimTypes.can_create_delete_task, "false"));
+    options.AddPolicy("SameTenantPolicy", policy =>
+    {
+        policy.RequireClaim(AppClaimTypes.can_create_delete_task, "true");
+        policy.Requirements.Add(new SameTenantRequirement());
+    });
 });
 
+builder.Services.AddScoped<IAuthorizationHandler, SameTenantHandler>();
+// builder.Services.AddHttpContextAccessor(); // Needed for IHttpContextAccessor
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();

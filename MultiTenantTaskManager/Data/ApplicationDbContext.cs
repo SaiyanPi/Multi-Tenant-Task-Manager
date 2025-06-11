@@ -5,7 +5,7 @@ using MultiTenantTaskManager.Models;
 
 namespace MultiTenantTaskManager.Data;
 
-public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options, IConfiguration configuration)
+public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
 : IdentityDbContext<ApplicationUser>(options)
 {
     public DbSet<Tenant> Tenants { get; set; }

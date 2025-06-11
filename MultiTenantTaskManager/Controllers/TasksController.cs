@@ -15,9 +15,11 @@ namespace MultiTenantTaskManager.Controllers;
 public class TasksController : ControllerBase
 {
     private readonly ITaskItemService _taskService;
-    public TasksController(ITaskItemService taskService)
+    private readonly IAuthorizationService _authorizationService;
+    public TasksController(ITaskItemService taskService, IAuthorizationService authorizationService)
     {
         _taskService = taskService ?? throw new ArgumentNullException(nameof(taskService));
+        _authorizationService = authorizationService;
     }
 
     // GET:/api/tasks
