@@ -1,9 +1,13 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MultiTenantTaskManager.Authentication;
 using MultiTenantTaskManager.Models;
 using MultiTenantTaskManager.Services;
 
 namespace MultiTenantTaskManager.Controllers;
 
+[Authorize(Roles = $"{AppRoles.Admin},{AppRoles.Manager}")]
+[Authorize(Policy = "CanCreateDeleteProject")]
 [ApiController]
 [Route("api/[controller]")]
 // [SkipTenantResolution] 

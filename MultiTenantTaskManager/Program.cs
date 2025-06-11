@@ -28,7 +28,7 @@ builder.Services.AddIdentityCore<ApplicationUser>()
     .AddRoles<IdentityRole>()
     .AddEntityFrameworkStores<ApplicationDbContext>()
     .AddDefaultTokenProviders();
-    
+
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -54,6 +54,26 @@ builder.Services.AddAuthentication(options =>
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret))
     };
 });
+
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("CanCreateDeleteTenant", policy =>
+        policy.RequireClaim(AppClaimTypes.can_create_delete_tenant, "true"));
+
+    options.AddPolicy("CanCreateDeleteProject", policy =>
+        policy.RequireClaim(AppClaimTypes.can_create_delete_project, "true"));
+
+    options.AddPolicy("CanCreateDeleteTask", policy =>
+        policy.RequireClaim(AppClaimTypes.can_create_delete_task, "true"));
+
+    options.AddPolicy("CanManageTasks", policy =>
+        policy.RequireClaim(AppClaimTypes.can_create_delete_task, "true"));
+
+    // since everyone can view tasks, we could make it anonymous without a policy
+    // options.AddPolicy("CanViewTasks", policy =>
+    //     policy.RequireClaim(AppClaimTypes.can_create_delete_task, "false"));
+});
+
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -97,6 +117,10 @@ using (var serviceScope = app.Services.CreateScope())
     if (!await roleManager.RoleExistsAsync(AppRoles.Manager))
     {
         await roleManager.CreateAsync(new IdentityRole(AppRoles.Manager));
+    }
+    if (!await roleManager.RoleExistsAsync(AppRoles.SpecialMember))
+    {
+        await roleManager.CreateAsync(new IdentityRole(AppRoles.SpecialMember));
     }
     if (!await roleManager.RoleExistsAsync(AppRoles.Member))
     {

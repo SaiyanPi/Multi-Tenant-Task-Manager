@@ -1,12 +1,15 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
+using MultiTenantTaskManager.Authentication;
 using MultiTenantTaskManager.Models;
 using MultiTenantTaskManager.Services;
 
 namespace MultiTenantTaskManager.Controllers;
 
-[Authorize]
+// [Authorize]
+[Authorize(Roles = AppRoles.Admin)] // Only Admins can access
+[Authorize(Policy = "CanCreateDeleteTenant")]
 [ApiController]
 [Route("api/[controller]")]
 [SkipTenantResolution] // This attribute allows skipping tenant resolution for this controller

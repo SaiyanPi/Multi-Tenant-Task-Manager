@@ -28,12 +28,6 @@ public class AccountController : ControllerBase
         _roleManager = roleManager;
     }
 
-    [HttpPost("register")]
-    public Task<IActionResult> Register([FromBody] RegisterDto model)
-    {
-        return RegisterUserWithRole(model, AppRoles.Member);
-    }
-
     [HttpPost("register-admin")]
     public Task<IActionResult> RegisterAdmin([FromBody] RegisterDto model)
     {
@@ -44,6 +38,18 @@ public class AccountController : ControllerBase
     public Task<IActionResult> RegisterVip([FromBody] RegisterDto model)
     {
         return RegisterUserWithRole(model, AppRoles.Manager);
+    }
+
+    [HttpPost("register-specialMember")]
+    public Task<IActionResult> RegisterSpecialMember([FromBody] RegisterDto model)
+    {
+        return RegisterUserWithRole(model, AppRoles.SpecialMember);
+    }
+
+    [HttpPost("register")]
+    public Task<IActionResult> Register([FromBody] RegisterDto model)
+    {
+        return RegisterUserWithRole(model, AppRoles.Member);
     }
 
     // [HttpPost("register")]
@@ -94,9 +100,13 @@ public class AccountController : ControllerBase
                     claimsToAdd.Add(new Claim(AppClaimTypes.can_create_delete_project, "true"));
                     claimsToAdd.Add(new Claim(AppClaimTypes.can_create_delete_task, "true"));
                 }
-                else if (roleName == AppRoles.Member)
+                else if (roleName == AppRoles.SpecialMember)
                 {
                     claimsToAdd.Add(new Claim(AppClaimTypes.can_create_delete_task, "true"));
+                }
+                else if (roleName == AppRoles.Member)
+                {
+                    claimsToAdd.Add(new Claim(AppClaimTypes.can_create_delete_task, "false"));
                 }
 
                 foreach (var claim in claimsToAdd)

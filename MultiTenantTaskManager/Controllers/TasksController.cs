@@ -1,8 +1,13 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MultiTenantTaskManager.Authentication;
 using MultiTenantTaskManager.Models;
 using MultiTenantTaskManager.Services;
 
 namespace MultiTenantTaskManager.Controllers;
+
+// [Authorize(Roles = $"{AppRoles.Admin},{AppRoles.Manager},{AppRoles.SpecialMember}")]
+// [Authorize(Policy = "CanCreateDeleteTask")]
 
 [ApiController]
 [Route("api/[controller]")]
@@ -15,7 +20,8 @@ public class TasksController : ControllerBase
         _taskService = taskService ?? throw new ArgumentNullException(nameof(taskService));
     }
 
-     // GET:/api/tasks
+    // GET:/api/tasks
+    [Authorize]
     [HttpGet]
     public async Task<ActionResult<IEnumerable<TaskItem>>> GetAllTasks()
     {
@@ -25,6 +31,7 @@ public class TasksController : ControllerBase
     }
 
     // GET:/api/tasks/{id}
+    [Authorize]
     [HttpGet("{id}")]
     public async Task<ActionResult<TaskItem>> GetTaskById(int id)
     {
@@ -35,6 +42,7 @@ public class TasksController : ControllerBase
     }
 
     // POST:/api/tasks
+    [Authorize(Policy = "CanManageTasks")]
     [HttpPost]
     public async Task<ActionResult<TaskItem>> CreateTask([FromBody] TaskItem taskItem)
     {
@@ -58,6 +66,7 @@ public class TasksController : ControllerBase
     }
 
     // PUT:/api/tasks/{id}
+    [Authorize(Policy = "CanManageTasks")]
     [HttpPut("{id}")]
     public async Task<ActionResult<TaskItem>> UpdateTask(int id, [FromBody] TaskItem taskItem)
     {
@@ -77,6 +86,7 @@ public class TasksController : ControllerBase
     }
 
     // DELETE:/api/tasks/{id}
+    [Authorize(Policy = "CanManageTasks")]
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteTask(int id)
     {
