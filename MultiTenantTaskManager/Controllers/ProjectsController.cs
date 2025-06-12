@@ -6,8 +6,9 @@ using MultiTenantTaskManager.Services;
 
 namespace MultiTenantTaskManager.Controllers;
 
-[Authorize(Roles = $"{AppRoles.Admin},{AppRoles.Manager}")]
-[Authorize(Policy = "CanCreateDeleteProject")]
+// [Authorize(Roles = $"{AppRoles.Admin},{AppRoles.Manager}")]
+// [Authorize(Policy = "CanCreateDeleteProject")]
+// [Authorize(Policy = "SameTenantPolicy")]
 [ApiController]
 [Route("api/[controller]")]
 // [SkipTenantResolution] 

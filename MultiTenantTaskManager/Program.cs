@@ -58,27 +58,27 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization(options =>
 {
-    options.AddPolicy("CanCreateDeleteTenant", policy =>
-        policy.RequireClaim(AppClaimTypes.can_create_delete_tenant, "true"));
+    // options.AddPolicy("CanViewTasks", policy =>
+    //     policy.RequireClaim(AppClaimTypes.can_view_tasks, "true"));
 
-    options.AddPolicy("CanCreateDeleteProject", policy =>
-        policy.RequireClaim(AppClaimTypes.can_create_delete_project, "true"));
+    // options.AddPolicy("CanCreateDeleteProject", policy =>
+    //     policy.RequireClaim(AppClaimTypes.can_create_delete_project, "true"));
 
-    options.AddPolicy("CanCreateDeleteTask", policy =>
-        policy.RequireClaim(AppClaimTypes.can_create_delete_task, "true"));
+    // options.AddPolicy("CanCreateDeleteTask", policy =>
+    //     policy.RequireClaim(AppClaimTypes.can_create_delete_task, "true"));
 
-    options.AddPolicy("CanManageTasks", policy =>
-        policy.RequireClaim(AppClaimTypes.can_create_delete_task, "true"));
+    // options.AddPolicy("CanManageTasks", policy =>
+    //     policy.RequireClaim(AppClaimTypes.can_create_delete_task, "true"));
 
     options.AddPolicy("SameTenantPolicy", policy =>
     {
-        policy.RequireClaim(AppClaimTypes.can_create_delete_task, "true");
         policy.Requirements.Add(new SameTenantRequirement());
     });
 });
 
 builder.Services.AddScoped<IAuthorizationHandler, SameTenantHandler>();
-// builder.Services.AddHttpContextAccessor(); // Needed for IHttpContextAccessor
+
+builder.Services.AddHttpContextAccessor(); // Needed for IHttpContextAccessor
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -115,6 +115,10 @@ using (var serviceScope = app.Services.CreateScope())
     dbContext.Database.EnsureCreated();
 
     var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
+    if (!await roleManager.RoleExistsAsync(AppRoles.SuperAdmin))
+    {
+        await roleManager.CreateAsync(new IdentityRole(AppRoles.SuperAdmin));
+    }
     if (!await roleManager.RoleExistsAsync(AppRoles.Admin))
     {
         await roleManager.CreateAsync(new IdentityRole(AppRoles.Admin));

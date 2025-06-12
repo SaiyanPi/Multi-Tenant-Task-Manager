@@ -8,11 +8,11 @@ using MultiTenantTaskManager.Services;
 namespace MultiTenantTaskManager.Controllers;
 
 // [Authorize]
-[Authorize(Roles = AppRoles.Admin)] // Only Admins can access
-[Authorize(Policy = "CanCreateDeleteTenant")]
+[Authorize(Roles = AppRoles.SuperAdmin)] 
+// [Authorize(Policy = "CanCreateDeleteTenant")]
 [ApiController]
 [Route("api/[controller]")]
-[SkipTenantResolution] // This attribute allows skipping tenant resolution for this controller
+[SkipTenantResolution] // allows skipping tenant resolution for this controller
 public class TenantsController : ControllerBase
 {
     private readonly ITenantService _tenantService;

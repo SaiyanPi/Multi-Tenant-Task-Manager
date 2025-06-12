@@ -4,12 +4,10 @@ using MultiTenantTaskManager.Accessor;
 namespace MultiTenantTaskManager.Authentication;
 public class SameTenantHandler : AuthorizationHandler<SameTenantRequirement>
 {
-    // private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly ITenantAccessor _tenantAccessor;
 
     public SameTenantHandler(ITenantAccessor tenantAccessor)
     {
-        // _httpContextAccessor = httpContextAccessor;
         _tenantAccessor = tenantAccessor;
     }
 

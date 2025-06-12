@@ -4,10 +4,12 @@ using System.Text;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using MultiTenantTaskManager.Accessor;
 using MultiTenantTaskManager.Authentication;
 using MultiTenantTaskManager.Authentication.DTOs;
+using MultiTenantTaskManager.Data;
 
 namespace MultiTenantTaskManager.Controllers;
 
@@ -15,18 +17,27 @@ namespace MultiTenantTaskManager.Controllers;
 [Route("api/[controller]")]
 public class AccountController : ControllerBase
 {
+    private readonly ApplicationDbContext _dbContext;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IConfiguration _configuration;
     private readonly ITenantAccessor _tenantAccessor;
     private readonly RoleManager<IdentityRole> _roleManager;
 
-    public AccountController(UserManager<ApplicationUser> userManager, IConfiguration configuration,
-        ITenantAccessor tenantAccessor, RoleManager<IdentityRole> roleManager)
+    public AccountController(ApplicationDbContext dbContext, UserManager<ApplicationUser> userManager,
+        IConfiguration configuration, ITenantAccessor tenantAccessor, RoleManager<IdentityRole> roleManager)
     {
+        _dbContext = dbContext;
         _userManager = userManager;
         _configuration = configuration;
         _tenantAccessor = tenantAccessor;
         _roleManager = roleManager;
+    }
+
+    [HttpPost("register-superAdmin")]
+    [SkipTenantResolution] 
+    public Task<IActionResult> RegisterSuperAdmin([FromBody] RegisterDto model)
+    {
+        return RegisterUserWithRole(model, AppRoles.SuperAdmin);
     }
 
     [HttpPost("register-admin")]
@@ -36,7 +47,7 @@ public class AccountController : ControllerBase
     }
 
     [HttpPost("register-manager")]
-    public Task<IActionResult> RegisterVip([FromBody] RegisterDto model)
+    public Task<IActionResult> RegisterManager([FromBody] RegisterDto model)
     {
         return RegisterUserWithRole(model, AppRoles.Manager);
     }
@@ -54,13 +65,70 @@ public class AccountController : ControllerBase
     }
 
     // [HttpPost("register")]
-    // [SkipTenantResolution] 
-    [Authorize(Policy = "SameTenantPolicy")]
     public async Task<IActionResult> RegisterUserWithRole([FromBody] RegisterDto model, string roleName)
     {
         if (ModelState.IsValid)
         {
-            model.TenantId = _tenantAccessor.TenantId;
+            // special handling for super admin outside tenant scope (to set tenantId null)
+            if (roleName == AppRoles.SuperAdmin)
+            {
+                var existedSuperAdmin = await _userManager.FindByNameAsync(model.Email);
+                if (existedSuperAdmin != null)
+                {
+                    ModelState.AddModelError("", "Email already exists!");
+                    return BadRequest(ModelState);
+                }
+
+                var SuperAdmin = new ApplicationUser
+                {
+                    UserName = model.Email,
+                    Email = model.Email,
+                    TenantId = null, // SuperAdmin lives outside tenant scope
+                    SecurityStamp = Guid.NewGuid().ToString()
+                };
+
+                var superAdminResult = await _userManager.CreateAsync(SuperAdmin, model.Password);
+                var superRoleResult = await _userManager.AddToRoleAsync(SuperAdmin, AppRoles.SuperAdmin);
+
+                if (superAdminResult.Succeeded && superRoleResult.Succeeded)
+                {
+                    var claimsToAdd = new List<Claim>
+                    {
+                        new Claim(AppClaimTypes.can_create_delete_tenants, "true")
+                    };
+
+                    foreach (var claim in claimsToAdd)
+                    {
+                        await _userManager.AddClaimAsync(SuperAdmin, claim);
+                    }
+
+                    return Ok("Super admin registered successfully.");
+                }
+
+                foreach (var error in superAdminResult.Errors)
+                    ModelState.AddModelError("", error.Description);
+
+                return BadRequest(ModelState);
+
+            }
+
+            // Regular tenant-scoped user registration
+            
+            if (model.TenantId == null)
+            {
+                model.TenantId = _tenantAccessor.TenantId;
+            }
+            var tenantExists = await _dbContext.Tenants.AnyAsync(t => t.Id == model.TenantId);
+            if (!tenantExists)
+            {
+                return BadRequest("Tenant does not exist.");
+            }
+
+            if (model.TenantId != _tenantAccessor.TenantId)
+            {
+                return BadRequest("TenantId in the request body does not match the current tenant context.");
+            }
+            
             var existedUser = await _userManager.FindByNameAsync(model.Email);
 
             if (existedUser != null)
@@ -87,28 +155,32 @@ public class AccountController : ControllerBase
                 var claimsToAdd = new List<Claim>
                 {
                     // Every user gets a tenant_id claim
-                    new("tenant_id", user.TenantId.ToString())
+                    new("tenant_id", user.TenantId?.ToString() ?? string.Empty)
                 };
 
                 // Based on role, assign relevant claim permissions
                 if (roleName == AppRoles.Admin)
                 {
-                    claimsToAdd.Add(new Claim(AppClaimTypes.can_create_delete_tenant, "true"));
-                    claimsToAdd.Add(new Claim(AppClaimTypes.can_create_delete_project, "true"));
-                    claimsToAdd.Add(new Claim(AppClaimTypes.can_create_delete_task, "true"));
+                    claimsToAdd.Add(new Claim(AppClaimTypes.can_manage_tenants, "true"));
+                    claimsToAdd.Add(new Claim(AppClaimTypes.can_manage_users, "true"));
+                    claimsToAdd.Add(new Claim(AppClaimTypes.can_assign_tasks, "true"));
+                    claimsToAdd.Add(new Claim(AppClaimTypes.can_edit_projects, "true"));
                 }
                 else if (roleName == AppRoles.Manager)
                 {
-                    claimsToAdd.Add(new Claim(AppClaimTypes.can_create_delete_project, "true"));
-                    claimsToAdd.Add(new Claim(AppClaimTypes.can_create_delete_task, "true"));
+                    claimsToAdd.Add(new Claim(AppClaimTypes.can_assign_tasks, "true"));
+                    claimsToAdd.Add(new Claim(AppClaimTypes.can_edit_projects, "true"));
+                    claimsToAdd.Add(new Claim(AppClaimTypes.can_edit_tasks, "true"));
+                    claimsToAdd.Add(new Claim(AppClaimTypes.can_view_tasks, "true"));
                 }
                 else if (roleName == AppRoles.SpecialMember)
                 {
-                    claimsToAdd.Add(new Claim(AppClaimTypes.can_create_delete_task, "true"));
+                    claimsToAdd.Add(new Claim(AppClaimTypes.can_edit_tasks, "true"));
+                    claimsToAdd.Add(new Claim(AppClaimTypes.can_view_tasks, "true"));
                 }
                 else if (roleName == AppRoles.Member)
                 {
-                    claimsToAdd.Add(new Claim(AppClaimTypes.can_create_delete_task, "false"));
+                    claimsToAdd.Add(new Claim(AppClaimTypes.can_view_tasks, "true"));
                 }
 
                 foreach (var claim in claimsToAdd)
@@ -135,12 +207,7 @@ public class AccountController : ControllerBase
     {
         if (!ModelState.IsValid)
             return BadRequest(new { message = "Invalid request data.", errors = ModelState });
-
-        // Read tenant ID from header
-        var headerTenantId = HttpContext.Request.Headers["X-Tenant-ID"].ToString();
-        if (string.IsNullOrWhiteSpace(headerTenantId))
-            return BadRequest(new { message = "Tenant ID is required in the 'X-Tenant-ID' header." });
-
+        
         var user = await _userManager.FindByEmailAsync(model.Email);
         if (user == null)
             return Unauthorized(new { message = "Invalid email or password." });
@@ -148,14 +215,24 @@ public class AccountController : ControllerBase
         var isPasswordValid = await _userManager.CheckPasswordAsync(user, model.Password);
         if (!isPasswordValid)
             return Unauthorized(new { message = "Invalid email or password." });
+        
+        var userRoles = await _userManager.GetRolesAsync(user);
+        // If user is SuperAdmin, skip tenant checks
+        if (!userRoles.Contains(AppRoles.SuperAdmin))
+        {
+            // Read tenant ID from header
+            var headerTenantId = HttpContext.Request.Headers["X-Tenant-ID"].ToString();
+            if (string.IsNullOrWhiteSpace(headerTenantId))
+                return BadRequest(new { message = "Tenant ID is required in the 'X-Tenant-ID' header." });
 
-        // Validate tenant match
-        var userTenantId = user.TenantId.ToString();
-        if (!string.Equals(userTenantId, headerTenantId, StringComparison.OrdinalIgnoreCase))
-            return Forbid("Tenant mismatch: You are not authorized to log in to this tenant.");
+            // Validate tenant match
+            var userTenantId = user.TenantId.ToString();
+            if (!string.Equals(userTenantId, headerTenantId, StringComparison.OrdinalIgnoreCase))
+                return Forbid("Tenant mismatch: You are not authorized to log in to this tenant.");
+
+        }
 
         var token = GenerateJwtToken(user);
-
         return Ok(new { token });
     }
 
@@ -177,7 +254,7 @@ public class AccountController : ControllerBase
             // new("tenant_id", user.TenantId.ToString())
             new(ClaimTypes.NameIdentifier, user.Id),
             new(ClaimTypes.Email, user.Email ?? string.Empty),
-            new("tenant_id", user.TenantId.ToString())  // custom tenant claim
+            new("tenant_id", user.TenantId?.ToString() ?? string.Empty)  // custom tenant claim
         };
 
         // 2. Add role claims
