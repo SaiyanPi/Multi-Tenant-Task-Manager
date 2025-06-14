@@ -125,7 +125,7 @@ public class AccountController : ControllerBase
             {
                 return BadRequest("TenantId is required either in the request body or header.");
             }
-            
+
             var tenantExists = await _dbContext.Tenants.AnyAsync(t => t.Id == model.TenantId);
             if (!tenantExists)
             {
@@ -259,12 +259,11 @@ public class AccountController : ControllerBase
         // 1. Get built-in claims
         var claims = new List<Claim>
         {
-            // new(JwtRegisteredClaimNames.Sub, user.Id),
-            // new(JwtRegisteredClaimNames.Email, user.Email ?? string.Empty),
-            // new("tenant_id", user.TenantId.ToString())
             new(ClaimTypes.NameIdentifier, user.Id),
             new(ClaimTypes.Email, user.Email ?? string.Empty),
-            new("tenant_id", user.TenantId?.ToString() ?? string.Empty)  // custom tenant claim
+            
+            // For Tenant-Specific Access: include the user's tenant ID in the JWT token
+            new("tenant_id", user.TenantId?.ToString() ?? string.Empty) 
         };
 
         // 2. Add role claims

@@ -56,53 +56,6 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
-// builder.Services.AddAuthorization(options =>
-// {
-//     options.AddPolicy("superAdmin", policy =>
-//         policy.RequireClaim(AppClaimTypes.can_manage_tenants, "true"));
-
-//     options.AddPolicy("canManageTenantUsersProjects", policy =>
-//     {
-//         //policy.RequireClaim(AppClaimTypes.can_manage_tenants, "true");
-//         policy.RequireClaim(AppClaimTypes.can_manage_users, "true");
-//         //policy.RequireClaim(AppClaimTypes.can_assign_tasks, "true");
-//         policy.RequireClaim(AppClaimTypes.can_manage_projects, "true");
-
-//     });
-
-//      options.AddPolicy("canManageProjects", policy =>
-//     {
-//         policy.RequireClaim(AppClaimTypes.can_manage_tasks, "true");
-//     });
-
-//     options.AddPolicy("canManageProjects", policy =>
-//     {
-//         policy.RequireClaim(AppClaimTypes.can_manage_projects, "true");
-//     });
-
-//     options.AddPolicy("canManageTasks", policy =>
-//     {
-//         policy.RequireClaim(AppClaimTypes.can_manage_tasks, "true");
-//         policy.RequireClaim(AppClaimTypes.can_view_tasks, "true");
-//     });
-
-//     options.AddPolicy("canViewTasks", policy =>
-//         policy.RequireClaim(AppClaimTypes.can_view_tasks, "true"));
-
-
-
-//     // options.AddPolicy("CanCreateDeleteTask", policy =>
-//     //     policy.RequireClaim(AppClaimTypes.can_create_delete_task, "true"));
-
-//     // options.AddPolicy("CanManageTasks", policy =>
-//     //     policy.RequireClaim(AppClaimTypes.can_create_delete_task, "true"));
-
-//     options.AddPolicy("SameTenantPolicy", policy =>
-//     {
-//         policy.Requirements.Add(new SameTenantRequirement());
-//     });
-// });
-
 builder.Services.AddAuthorization(options =>
 {
     // TASK POLICIES
@@ -127,6 +80,10 @@ builder.Services.AddAuthorization(options =>
     // SUPER ADMIN TENANT MANAGEMENT (all tenants)
     options.AddPolicy("canManageTenants", policy =>
         policy.RequireClaim(AppClaimTypes.can_manage_tenants, "true"));
+
+    // RESOURCE BASED AUTHORIZATION (Tenant-specific policy)
+    options.AddPolicy("SameTenant", policy =>
+        policy.Requirements.Add(new SameTenantRequirement()));
 });
 
 builder.Services.AddScoped<IAuthorizationHandler, SameTenantHandler>();

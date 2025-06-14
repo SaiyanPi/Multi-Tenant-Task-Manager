@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using MultiTenantTaskManager.Data;
+using MultiTenantTaskManager.DTOs;
+using MultiTenantTaskManager.Mappers;
 using MultiTenantTaskManager.Models;
 
 namespace MultiTenantTaskManager.Services;
@@ -13,60 +15,64 @@ public class TenantService : ITenantService
         _context = context ?? throw new ArgumentNullException(nameof(context));
     }
 
-    public async Task<IEnumerable<Tenant>> GetAllTenantsAsync(int page = 1, 
-        int pageSize = 10)
+    public async Task<IEnumerable<TenantDto>> GetAllTenantsAsync(int page = 1, int pageSize = 10)
     {
-        return await _context.Tenants
+        var tenants = await _context.Tenants
             .AsNoTracking()
             .Include(t => t.Projects) // This eagerly loads the related projects
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync();
+
+         return tenants.Select(t => t.ToDto());
     }
 
-    public async Task<Tenant?> GetTenantByIdAsync(Guid tenantId)
+    public async Task<TenantDto?> GetTenantByIdAsync(Guid tenantId)
     {
-        return await _context.Tenants
+        var tenant = await _context.Tenants
+        .AsNoTracking()
             .Include(t => t.Projects) // This eagerly loads the related projects
-            .AsNoTracking()
             .FirstOrDefaultAsync(t => t.Id == tenantId);
+
+        return tenant?.ToDto();
     }
 
-    public async Task<Tenant> CreateTenantAsync(Tenant tenant)
+    public async Task<TenantDto> CreateTenantAsync(CreateTenantDto dto)
     {
-        if(tenant == null) throw new ArgumentNullException(nameof(tenant));
+        if(dto == null) throw new ArgumentNullException(nameof(dto));
 
+        var tenant = dto.ToModel();
         tenant.Id = Guid.NewGuid(); // Ensure a new ID is set
 
         _context.Tenants.Add(tenant);
         await _context.SaveChangesAsync();
 
-        return tenant;
+        return tenant.ToDto();
     }
 
-    public async Task<Tenant> UpdateTenantAsync(Guid tenantId, Tenant tenant)
+    public async Task<TenantDto> UpdateTenantAsync(Guid tenantId, UpdateTenantDto dto)
     {
-        if (tenant == null) throw new ArgumentNullException(nameof(tenant));
+        if (dto == null) throw new ArgumentNullException(nameof(dto));
 
-        var existingTenant = await GetTenantByIdAsync(tenantId);
-        if (existingTenant == null)
+        var tenant = await _context.Tenants.FirstOrDefaultAsync(t => t.Id == tenantId);
+        if (tenant == null)
         {
             throw new KeyNotFoundException($"Tenant with ID {tenantId} not found.");
         }
-        _context.Tenants.Update(tenant);
+
+        tenant.UpdateFromDto(dto);
         await _context.SaveChangesAsync();
 
-        return tenant;
+        return tenant.ToDto();
     }
 
     public async Task<bool> DeleteTenantAsync(Guid tenantId)
     {
-        var tenant = await GetTenantByIdAsync(tenantId);
+        var tenant = await _context.Tenants.FirstOrDefaultAsync(t => t.Id == tenantId);
         if (tenant == null) return false;
 
         _context.Tenants.Remove(tenant);
         await _context.SaveChangesAsync();
-        
         return true;
     }
 }

@@ -12,6 +12,7 @@ namespace MultiTenantTaskManager.Controllers;
 public class ProjectsController : ControllerBase
 {
     private readonly IProjectService _projectService;
+    
     public ProjectsController(IProjectService projectService)
     {
         _projectService = projectService ?? throw new ArgumentNullException(nameof(projectService));

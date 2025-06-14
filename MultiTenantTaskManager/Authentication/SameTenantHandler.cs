@@ -11,6 +11,7 @@ public class SameTenantHandler : AuthorizationHandler<SameTenantRequirement>
         _tenantAccessor = tenantAccessor;
     }
 
+    // compare the tenant ID from the user’s claims with the tenant ID of the resource.
     protected override Task HandleRequirementAsync(AuthorizationHandlerContext context, SameTenantRequirement requirement)
     {
         var tenantClaim = context.User.FindFirst("tenant_id")?.Value;

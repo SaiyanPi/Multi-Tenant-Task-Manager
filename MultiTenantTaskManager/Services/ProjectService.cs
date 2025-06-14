@@ -1,3 +1,5 @@
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using MultiTenantTaskManager.Accessor;
 using MultiTenantTaskManager.Data;
@@ -8,12 +10,28 @@ public class ProjectService : IProjectService
 {
     private readonly ApplicationDbContext _context;
     private readonly ITenantAccessor _tenantAccessor;
+    private readonly IAuthorizationService _authorizationService;
+    private readonly IHttpContextAccessor _httpContextAccessor;
 
-    public ProjectService(ApplicationDbContext context, ITenantAccessor tenantAccessor)
+    public ProjectService(ApplicationDbContext context, ITenantAccessor tenantAccessor,
+        IAuthorizationService authorizationService, IHttpContextAccessor httpContextAccessor)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
         _tenantAccessor = tenantAccessor ?? throw new ArgumentNullException(nameof(tenantAccessor));
+        _authorizationService = authorizationService ?? throw new ArgumentNullException(nameof(authorizationService));
+        _httpContextAccessor = httpContextAccessor ?? throw new ArgumentNullException(nameof(httpContextAccessor));
     }
+    private ClaimsPrincipal User
+    {
+        get
+        {
+            var httpContext = _httpContextAccessor.HttpContext;
+            if (httpContext == null || httpContext.User == null)
+                throw new InvalidOperationException("HttpContext or User is null.");
+            return httpContext.User;
+        }
+    }
+
 
     public async Task<IEnumerable<Project>> GetAllProjectsAsync(int page = 1, int pageSize = 10)
     {
@@ -28,9 +46,15 @@ public class ProjectService : IProjectService
 
     public async Task<Project?> GetProjectByIdAsync(int projectId)
     {
-        return await _context.Projects
+        var project = await _context.Projects
             .AsNoTracking()
             .FirstOrDefaultAsync(p => p.Id == projectId && p.TenantId == _tenantAccessor.TenantId);
+
+        // Run SameTenant policy
+        // var authResult = await _authorizationService.AuthorizeAsync(User, null, "SameTenant");
+        // if (!authResult.Succeeded) throw new UnauthorizedAccessException("Forbidden: Cross-tenant access denied");
+        
+        return project;
     }
 
     public async Task<Project> CreateProjectAsync(Project project)
