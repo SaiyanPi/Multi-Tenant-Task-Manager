@@ -87,9 +87,7 @@ public class TenantResolutionMiddleware(RequestDelegate next)
 
         // following code is commented because when logging in user as SuperAdmin, user is not authenticated
         // yet so we cannot skip the middleware at the time of logging so these code lines does not hit
-
         // If the user is authenticated and is SuperAdmin → skip tenant enforcement
-
         // var user = context.User;
         // if (user?.Identity?.IsAuthenticated == true && user.IsInRole("SuperAdmin"))
         // {
@@ -97,6 +95,7 @@ public class TenantResolutionMiddleware(RequestDelegate next)
         //     return;
         // }
 
+        // 5. Skip Tenant Resolution on Login IF the Email Belongs to a SuperAdmin
         var isLoginEndpoint = context.Request.Path.Equals("/api/account/login", StringComparison.OrdinalIgnoreCase);
 
         if (isLoginEndpoint && context.Request.Method == HttpMethods.Post)

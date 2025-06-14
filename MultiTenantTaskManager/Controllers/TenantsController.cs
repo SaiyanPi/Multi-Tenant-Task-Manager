@@ -7,9 +7,7 @@ using MultiTenantTaskManager.Services;
 
 namespace MultiTenantTaskManager.Controllers;
 
-// [Authorize]
-[Authorize(Roles = AppRoles.SuperAdmin)] 
-// [Authorize(Policy = "CanCreateDeleteTenant")]
+[Authorize(Policy = "canManageTenants")] 
 [ApiController]
 [Route("api/[controller]")]
 [SkipTenantResolution] // allows skipping tenant resolution for this controller

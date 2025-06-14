@@ -15,12 +15,14 @@ public class ProjectService : IProjectService
         _tenantAccessor = tenantAccessor ?? throw new ArgumentNullException(nameof(tenantAccessor));
     }
 
-    public async Task<IEnumerable<Project>> GetAllProjectsAsync()
+    public async Task<IEnumerable<Project>> GetAllProjectsAsync(int page = 1, int pageSize = 10)
     {
         return await _context.Projects
+            .AsNoTracking()
             .Where(p => p.TenantId == _tenantAccessor.TenantId)
             .Include(p => p.Tasks)
-            .AsNoTracking()
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .ToListAsync();
     }
 

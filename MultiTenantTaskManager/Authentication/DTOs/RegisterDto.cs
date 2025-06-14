@@ -13,6 +13,5 @@ public class RegisterDto
     
     public string? Role { get; set; } // Optional, defaults to "Member"
     
-    [Required(ErrorMessage = "Tenant ID is required")]
     public Guid? TenantId { get; set; }
 }

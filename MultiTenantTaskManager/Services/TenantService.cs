@@ -13,11 +13,14 @@ public class TenantService : ITenantService
         _context = context ?? throw new ArgumentNullException(nameof(context));
     }
 
-    public async Task<IEnumerable<Tenant>> GetAllTenantsAsync()
+    public async Task<IEnumerable<Tenant>> GetAllTenantsAsync(int page = 1, 
+        int pageSize = 10)
     {
         return await _context.Tenants
-            .Include(t => t.Projects) // This eagerly loads the related projects
             .AsNoTracking()
+            .Include(t => t.Projects) // This eagerly loads the related projects
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .ToListAsync();
     }
 

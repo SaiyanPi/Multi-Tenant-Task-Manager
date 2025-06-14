@@ -94,7 +94,7 @@ public class AccountController : ControllerBase
                 {
                     var claimsToAdd = new List<Claim>
                     {
-                        new Claim(AppClaimTypes.can_create_delete_tenants, "true")
+                        new Claim(AppClaimTypes.can_manage_tenants, "true")
                     };
 
                     foreach (var claim in claimsToAdd)
@@ -114,10 +114,18 @@ public class AccountController : ControllerBase
 
             // Regular tenant-scoped user registration
             
-            if (model.TenantId == null)
+             // Fallback to tenant accessor if TenantId is not provided in body
+            if (!model.TenantId.HasValue || model.TenantId == Guid.Empty)
             {
                 model.TenantId = _tenantAccessor.TenantId;
             }
+
+            // If still missing, return an error
+            if (!model.TenantId.HasValue || model.TenantId == Guid.Empty)
+            {
+                return BadRequest("TenantId is required either in the request body or header.");
+            }
+            
             var tenantExists = await _dbContext.Tenants.AnyAsync(t => t.Id == model.TenantId);
             if (!tenantExists)
             {
@@ -158,37 +166,39 @@ public class AccountController : ControllerBase
                     new("tenant_id", user.TenantId?.ToString() ?? string.Empty)
                 };
 
-                // Based on role, assign relevant claim permissions
-                if (roleName == AppRoles.Admin)
-                {
-                    claimsToAdd.Add(new Claim(AppClaimTypes.can_manage_tenants, "true"));
-                    claimsToAdd.Add(new Claim(AppClaimTypes.can_manage_users, "true"));
-                    claimsToAdd.Add(new Claim(AppClaimTypes.can_assign_tasks, "true"));
-                    claimsToAdd.Add(new Claim(AppClaimTypes.can_edit_projects, "true"));
-                }
-                else if (roleName == AppRoles.Manager)
-                {
-                    claimsToAdd.Add(new Claim(AppClaimTypes.can_assign_tasks, "true"));
-                    claimsToAdd.Add(new Claim(AppClaimTypes.can_edit_projects, "true"));
-                    claimsToAdd.Add(new Claim(AppClaimTypes.can_edit_tasks, "true"));
-                    claimsToAdd.Add(new Claim(AppClaimTypes.can_view_tasks, "true"));
-                }
-                else if (roleName == AppRoles.SpecialMember)
-                {
-                    claimsToAdd.Add(new Claim(AppClaimTypes.can_edit_tasks, "true"));
-                    claimsToAdd.Add(new Claim(AppClaimTypes.can_view_tasks, "true"));
-                }
-                else if (roleName == AppRoles.Member)
-                {
-                    claimsToAdd.Add(new Claim(AppClaimTypes.can_view_tasks, "true"));
-                }
+                // following code is actually unnecessary because there is no need to store role claims in
+                // the database and GenerateJwtToken method already adds claims dynamically based on roles
 
-                foreach (var claim in claimsToAdd)
-                {
-                    await _userManager.AddClaimAsync(user, claim);
-                }
+                // // Based on role, assign relevant claim permissions
+                // if (roleName == AppRoles.Admin)
+                // {
+                //     claimsToAdd.Add(new Claim(AppClaimTypes.can_manage_tenants, "true"));
+                //     claimsToAdd.Add(new Claim(AppClaimTypes.can_manage_users, "true"));
+                //     claimsToAdd.Add(new Claim(AppClaimTypes.can_assign_tasks, "true"));
+                //     claimsToAdd.Add(new Claim(AppClaimTypes.can_edit_projects, "true"));
+                // }
+                // else if (roleName == AppRoles.Manager)
+                // {
+                //     claimsToAdd.Add(new Claim(AppClaimTypes.can_assign_tasks, "true"));
+                //     claimsToAdd.Add(new Claim(AppClaimTypes.can_edit_projects, "true"));
+                //     claimsToAdd.Add(new Claim(AppClaimTypes.can_edit_tasks, "true"));
+                //     claimsToAdd.Add(new Claim(AppClaimTypes.can_view_tasks, "true"));
+                // }
+                // else if (roleName == AppRoles.SpecialMember)
+                // {
+                //     claimsToAdd.Add(new Claim(AppClaimTypes.can_edit_tasks, "true"));
+                //     claimsToAdd.Add(new Claim(AppClaimTypes.can_view_tasks, "true"));
+                // }
+                // else if (roleName == AppRoles.Member)
+                // {
+                //     claimsToAdd.Add(new Claim(AppClaimTypes.can_view_tasks, "true"));
+                // }
 
-                // finally response
+                // foreach (var claim in claimsToAdd)
+                // {
+                //     await _userManager.AddClaimAsync(user, claim);
+                // }
+
                 return Ok("User registered successfully.");
             }
 
@@ -261,15 +271,41 @@ public class AccountController : ControllerBase
         var userRoles = await _userManager.GetRolesAsync(user);
         claims.AddRange(userRoles.Select(role => new Claim(ClaimTypes.Role, role)));
 
-        // 3. Add custom claims stored in DB
-        var dbClaims = await _userManager.GetClaimsAsync(user);
-        claims.AddRange(dbClaims.Where(c => 
-            c.Type != ClaimTypes.Role && 
-            c.Type != ClaimTypes.Email && 
-            c.Type != ClaimTypes.NameIdentifier && 
-            c.Type != "tenant_id")); // Avoid duplication
+        // Dynamically add claims based on roles
+        foreach (var role in userRoles)
+        {
+            switch (role)
+            {
+                case AppRoles.SuperAdmin:
+                    claims.Add(new Claim(AppClaimTypes.can_manage_tenants, "true"));
+                    break;
 
-        // 4. Sign and issue token
+                case AppRoles.Admin:
+                    claims.Add(new Claim(AppClaimTypes.can_manage_tenant, "true"));
+                    claims.Add(new Claim(AppClaimTypes.can_manage_users, "true"));
+                    //claims.Add(new Claim(AppClaimTypes.can_assign_tasks, "true"));
+                    claims.Add(new Claim(AppClaimTypes.can_manage_projects, "true"));
+                    break;
+
+                case AppRoles.Manager:
+                    //claims.Add(new Claim(AppClaimTypes.can_assign_tasks, "true"));
+                    claims.Add(new Claim(AppClaimTypes.can_manage_projects, "true"));
+                    claims.Add(new Claim(AppClaimTypes.can_manage_tasks, "true"));
+                    claims.Add(new Claim(AppClaimTypes.can_view_tasks, "true"));
+                    break;
+
+                case AppRoles.SpecialMember:
+                    claims.Add(new Claim(AppClaimTypes.can_manage_tasks, "true"));
+                    claims.Add(new Claim(AppClaimTypes.can_view_tasks, "true"));
+                    break;
+
+                 case AppRoles.Member:
+                    claims.Add(new Claim(AppClaimTypes.can_view_tasks, "true"));
+                    break;
+            }
+        }
+
+        // 3. Sign and issue token
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 

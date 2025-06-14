@@ -6,9 +6,6 @@ using MultiTenantTaskManager.Services;
 
 namespace MultiTenantTaskManager.Controllers;
 
-// [Authorize(Roles = $"{AppRoles.Admin},{AppRoles.Manager}")]
-// [Authorize(Policy = "CanCreateDeleteProject")]
-// [Authorize(Policy = "SameTenantPolicy")]
 [ApiController]
 [Route("api/[controller]")]
 // [SkipTenantResolution] 
@@ -20,7 +17,8 @@ public class ProjectsController : ControllerBase
         _projectService = projectService ?? throw new ArgumentNullException(nameof(projectService));
     }
 
-     // GET:/api/projects
+    // GET:/api/projects
+      [Authorize(Policy = "canManageProjects")]
     [HttpGet]
     public async Task<ActionResult<IEnumerable<Project>>> GetAllProjects()
     {
@@ -30,6 +28,7 @@ public class ProjectsController : ControllerBase
     }
 
     // GET:/api/projects/{id}
+     [Authorize(Policy = "canManageProjects")]
     [HttpGet("{id}")]
     public async Task<ActionResult<Project>> GetProjectById(int id)
     {
@@ -40,6 +39,7 @@ public class ProjectsController : ControllerBase
     }
 
     // POST:/api/projects
+     [Authorize(Policy = "canManageProjects")]
     [HttpPost]
     public async Task<ActionResult<Project>> CreateProject([FromBody] Project project)
     {
@@ -66,6 +66,7 @@ public class ProjectsController : ControllerBase
     }
 
     // PUT:/api/projects/{id}
+     [Authorize(Policy = "canManageProjects")]
     [HttpPut("{id}")]
     public async Task<ActionResult<Project>> UpdateProject(int id, [FromBody] Project project)
     {
@@ -85,6 +86,7 @@ public class ProjectsController : ControllerBase
     }
 
     // DELETE:/api/Projects/{id}
+     [Authorize(Policy = "canManageProjects")]
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteProject(int id)
     {

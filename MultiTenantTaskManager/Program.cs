@@ -56,24 +56,77 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
+// builder.Services.AddAuthorization(options =>
+// {
+//     options.AddPolicy("superAdmin", policy =>
+//         policy.RequireClaim(AppClaimTypes.can_manage_tenants, "true"));
+
+//     options.AddPolicy("canManageTenantUsersProjects", policy =>
+//     {
+//         //policy.RequireClaim(AppClaimTypes.can_manage_tenants, "true");
+//         policy.RequireClaim(AppClaimTypes.can_manage_users, "true");
+//         //policy.RequireClaim(AppClaimTypes.can_assign_tasks, "true");
+//         policy.RequireClaim(AppClaimTypes.can_manage_projects, "true");
+
+//     });
+
+//      options.AddPolicy("canManageProjects", policy =>
+//     {
+//         policy.RequireClaim(AppClaimTypes.can_manage_tasks, "true");
+//     });
+
+//     options.AddPolicy("canManageProjects", policy =>
+//     {
+//         policy.RequireClaim(AppClaimTypes.can_manage_projects, "true");
+//     });
+
+//     options.AddPolicy("canManageTasks", policy =>
+//     {
+//         policy.RequireClaim(AppClaimTypes.can_manage_tasks, "true");
+//         policy.RequireClaim(AppClaimTypes.can_view_tasks, "true");
+//     });
+
+//     options.AddPolicy("canViewTasks", policy =>
+//         policy.RequireClaim(AppClaimTypes.can_view_tasks, "true"));
+
+
+
+//     // options.AddPolicy("CanCreateDeleteTask", policy =>
+//     //     policy.RequireClaim(AppClaimTypes.can_create_delete_task, "true"));
+
+//     // options.AddPolicy("CanManageTasks", policy =>
+//     //     policy.RequireClaim(AppClaimTypes.can_create_delete_task, "true"));
+
+//     options.AddPolicy("SameTenantPolicy", policy =>
+//     {
+//         policy.Requirements.Add(new SameTenantRequirement());
+//     });
+// });
+
 builder.Services.AddAuthorization(options =>
 {
-    // options.AddPolicy("CanViewTasks", policy =>
-    //     policy.RequireClaim(AppClaimTypes.can_view_tasks, "true"));
+    // TASK POLICIES
+    options.AddPolicy("canViewTasks", policy =>
+        policy.RequireClaim(AppClaimTypes.can_view_tasks, "true"));
 
-    // options.AddPolicy("CanCreateDeleteProject", policy =>
-    //     policy.RequireClaim(AppClaimTypes.can_create_delete_project, "true"));
+    options.AddPolicy("canManageTasks", policy =>
+        policy.RequireClaim(AppClaimTypes.can_manage_tasks, "true"));
 
-    // options.AddPolicy("CanCreateDeleteTask", policy =>
-    //     policy.RequireClaim(AppClaimTypes.can_create_delete_task, "true"));
+    // PROJECT POLICIES
+    options.AddPolicy("canManageProjects", policy =>
+        policy.RequireClaim(AppClaimTypes.can_manage_projects, "true"));
 
-    // options.AddPolicy("CanManageTasks", policy =>
-    //     policy.RequireClaim(AppClaimTypes.can_create_delete_task, "true"));
+    // USER MANAGEMENT
+    options.AddPolicy("canManageUsers", policy =>
+        policy.RequireClaim(AppClaimTypes.can_manage_users, "true"));
 
-    options.AddPolicy("SameTenantPolicy", policy =>
-    {
-        policy.Requirements.Add(new SameTenantRequirement());
-    });
+    // TENANT MANAGEMENT (for Admin managing their own tenant)
+    options.AddPolicy("canManageTenant", policy =>
+        policy.RequireClaim(AppClaimTypes.can_manage_tenant, "true"));
+
+    // SUPER ADMIN TENANT MANAGEMENT (all tenants)
+    options.AddPolicy("canManageTenants", policy =>
+        policy.RequireClaim(AppClaimTypes.can_manage_tenants, "true"));
 });
 
 builder.Services.AddScoped<IAuthorizationHandler, SameTenantHandler>();
@@ -86,6 +139,7 @@ builder.Services.AddScoped<ITenantAccessor, TenantAccessor>();
 builder.Services.AddScoped<ITenantService, TenantService>();
 builder.Services.AddScoped<IProjectService, ProjectService>();
 builder.Services.AddScoped<ITaskItemService, TaskItemService>();
+builder.Services.AddScoped<IUserService, UserService>();
 
 var app = builder.Build();
 

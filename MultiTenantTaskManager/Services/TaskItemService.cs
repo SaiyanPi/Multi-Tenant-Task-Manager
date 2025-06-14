@@ -1,3 +1,4 @@
+using Azure;
 using Microsoft.EntityFrameworkCore;
 using MultiTenantTaskManager.Accessor;
 using MultiTenantTaskManager.Data;
@@ -16,12 +17,13 @@ public class TaskItemService : ITaskItemService
         _tenantAccessor = tenantAccessor ?? throw new ArgumentNullException(nameof(tenantAccessor));
     }
 
-    public async Task<IEnumerable<TaskItem>> GetAllTaskAsync()
+    public async Task<IEnumerable<TaskItem>> GetAllTaskAsync(int page = 1, int pageSize = 10)
     {
         return await _context.TaskItems
-            .Where(t => t.TenantId == _tenantAccessor.TenantId)
-            //.Include(t => t.Project)
             .AsNoTracking()
+            .Where(t => t.TenantId == _tenantAccessor.TenantId)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .ToListAsync();
     }
 

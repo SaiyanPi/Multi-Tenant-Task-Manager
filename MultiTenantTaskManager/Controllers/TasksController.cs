@@ -6,24 +6,19 @@ using MultiTenantTaskManager.Services;
 
 namespace MultiTenantTaskManager.Controllers;
 
-// [Authorize(Roles = $"{AppRoles.Admin},{AppRoles.Manager},{AppRoles.SpecialMember}")]
-// [Authorize(Policy = "CanCreateDeleteTask")]
-
 [ApiController]
 [Route("api/[controller]")]
-// [SkipTenantResolution] 
 public class TasksController : ControllerBase
 {
     private readonly ITaskItemService _taskService;
-    private readonly IAuthorizationService _authorizationService;
-    public TasksController(ITaskItemService taskService, IAuthorizationService authorizationService)
+    public TasksController(ITaskItemService taskService)
     {
         _taskService = taskService ?? throw new ArgumentNullException(nameof(taskService));
-        _authorizationService = authorizationService;
+
     }
 
     // GET:/api/tasks
-    [Authorize]
+    [Authorize(Policy = "canViewTasks")]
     [HttpGet]
     public async Task<ActionResult<IEnumerable<TaskItem>>> GetAllTasks()
     {
@@ -33,7 +28,7 @@ public class TasksController : ControllerBase
     }
 
     // GET:/api/tasks/{id}
-    [Authorize]
+    [Authorize(Policy = "canViewTasks")]
     [HttpGet("{id}")]
     public async Task<ActionResult<TaskItem>> GetTaskById(int id)
     {
@@ -44,7 +39,7 @@ public class TasksController : ControllerBase
     }
 
     // POST:/api/tasks
-    [Authorize(Policy = "CanManageTasks")]
+    [Authorize(Policy = "canManageTasks")]
     [HttpPost]
     public async Task<ActionResult<TaskItem>> CreateTask([FromBody] TaskItem taskItem)
     {
@@ -68,7 +63,7 @@ public class TasksController : ControllerBase
     }
 
     // PUT:/api/tasks/{id}
-    [Authorize(Policy = "CanManageTasks")]
+    [Authorize(Policy = "canManageTasks")]
     [HttpPut("{id}")]
     public async Task<ActionResult<TaskItem>> UpdateTask(int id, [FromBody] TaskItem taskItem)
     {
@@ -88,7 +83,7 @@ public class TasksController : ControllerBase
     }
 
     // DELETE:/api/tasks/{id}
-    [Authorize(Policy = "CanManageTasks")]
+    [Authorize(Policy = "canManageTasks")]
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteTask(int id)
     {
