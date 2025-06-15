@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using MultiTenantTaskManager.Data;
-using MultiTenantTaskManager.DTOs;
+using MultiTenantTaskManager.DTOs.Tenant;
 using MultiTenantTaskManager.Mappers;
 using MultiTenantTaskManager.Models;
 
@@ -24,7 +24,7 @@ public class TenantService : ITenantService
             .Take(pageSize)
             .ToListAsync();
 
-         return tenants.Select(t => t.ToDto());
+        return tenants.Select(t => t.ToTenantDto());
     }
 
     public async Task<TenantDto?> GetTenantByIdAsync(Guid tenantId)
@@ -34,20 +34,20 @@ public class TenantService : ITenantService
             .Include(t => t.Projects) // This eagerly loads the related projects
             .FirstOrDefaultAsync(t => t.Id == tenantId);
 
-        return tenant?.ToDto();
+        return tenant?.ToTenantDto();
     }
 
     public async Task<TenantDto> CreateTenantAsync(CreateTenantDto dto)
     {
         if(dto == null) throw new ArgumentNullException(nameof(dto));
 
-        var tenant = dto.ToModel();
+        var tenant = dto.ToTenantModel();
         tenant.Id = Guid.NewGuid(); // Ensure a new ID is set
 
         _context.Tenants.Add(tenant);
         await _context.SaveChangesAsync();
 
-        return tenant.ToDto();
+        return tenant.ToTenantDto();
     }
 
     public async Task<TenantDto> UpdateTenantAsync(Guid tenantId, UpdateTenantDto dto)
@@ -63,7 +63,7 @@ public class TenantService : ITenantService
         tenant.UpdateFromDto(dto);
         await _context.SaveChangesAsync();
 
-        return tenant.ToDto();
+        return tenant.ToTenantDto();
     }
 
     public async Task<bool> DeleteTenantAsync(Guid tenantId)

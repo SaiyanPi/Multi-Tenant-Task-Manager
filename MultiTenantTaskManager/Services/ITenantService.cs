@@ -1,4 +1,4 @@
-using MultiTenantTaskManager.DTOs;
+using MultiTenantTaskManager.DTOs.Tenant;
 using MultiTenantTaskManager.Models;
 
 namespace MultiTenantTaskManager.Services;

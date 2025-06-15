@@ -1,6 +1,6 @@
-namespace MultiTenantTaskManager.DTOs;
+namespace  MultiTenantTaskManager.DTOs.Tenant;
 
-public class TenantDto
+public class UpdateTenantDto
 {
     public Guid Id { get; set; }
     public string Name { get; set; } = string.Empty;

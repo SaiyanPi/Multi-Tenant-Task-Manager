@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using MultiTenantTaskManager.Authentication;
-using MultiTenantTaskManager.DTOs;
+using MultiTenantTaskManager.DTOs.Tenant;
 using MultiTenantTaskManager.Models;
 using MultiTenantTaskManager.Services;
 

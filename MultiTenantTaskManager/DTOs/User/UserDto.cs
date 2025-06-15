@@ -1,4 +1,4 @@
-namespace MultiTenantTaskManager.DTOs;
+namespace MultiTenantTaskManager.DTOs.User;
 public class UserDto
 {
     public string Id { get; set; } = string.Empty;

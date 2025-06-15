@@ -1,6 +1,4 @@
-
-
-using MultiTenantTaskManager.DTOs;
+using MultiTenantTaskManager.DTOs.User;
 
 namespace MultiTenantTaskManager.Services;
 public interface IUserService

@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MultiTenantTaskManager.Authentication;
+using MultiTenantTaskManager.DTOs.TaskItem;
 using MultiTenantTaskManager.Models;
 using MultiTenantTaskManager.Services;
 
@@ -20,7 +21,7 @@ public class TasksController : ControllerBase
     // GET:/api/tasks
     [Authorize(Policy = "canViewTasks")]
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<TaskItem>>> GetAllTasks()
+    public async Task<ActionResult<IEnumerable<TaskItemDto>>> GetAllTasks()
     {
         var tasks = await _taskService.GetAllTaskAsync();
 
@@ -30,7 +31,7 @@ public class TasksController : ControllerBase
     // GET:/api/tasks/{id}
     [Authorize(Policy = "canViewTasks")]
     [HttpGet("{id}")]
-    public async Task<ActionResult<TaskItem>> GetTaskById(int id)
+    public async Task<ActionResult<TaskItemDto>> GetTaskById(int id)
     {
         var task = await _taskService.GetTaskByIdAsync(id);
         if (task == null) return NotFound($"Task with ID {id} not found.");
@@ -41,13 +42,13 @@ public class TasksController : ControllerBase
     // POST:/api/tasks
     [Authorize(Policy = "canManageTasks")]
     [HttpPost]
-    public async Task<ActionResult<TaskItem>> CreateTask([FromBody] TaskItem taskItem)
+    public async Task<ActionResult<TaskItemDto>> CreateTask([FromBody] CreateTaskItemDto dto)
     {
         if (!ModelState.IsValid) return BadRequest(ModelState);
 
         try
         {
-            var createdTask = await _taskService.CreateTaskAsync(taskItem);
+            var createdTask = await _taskService.CreateTaskAsync(dto);
             return CreatedAtAction(nameof(GetTaskById), new { id = createdTask.Id }, createdTask);
         }
         catch (InvalidOperationException ex)
@@ -65,15 +66,15 @@ public class TasksController : ControllerBase
     // PUT:/api/tasks/{id}
     [Authorize(Policy = "canManageTasks")]
     [HttpPut("{id}")]
-    public async Task<ActionResult<TaskItem>> UpdateTask(int id, [FromBody] TaskItem taskItem)
+    public async Task<ActionResult<TaskItemDto>> UpdateTask(int id, [FromBody] UpdateTaskItemDto dto)
     {
         if (!ModelState.IsValid) return BadRequest(ModelState);
 
-        if(id != taskItem.Id) return BadRequest("Task ID in the URL does not match the ID in the body.");
+        if(id != dto.Id) return BadRequest("Task ID in the URL does not match the ID in the body.");
 
         try
         {
-            var updatedTask = await _taskService.UpdateTaskAsync(id, taskItem);
+            var updatedTask = await _taskService.UpdateTaskAsync(id, dto);
             return Ok(updatedTask);
         }
         catch (KeyNotFoundException ex)

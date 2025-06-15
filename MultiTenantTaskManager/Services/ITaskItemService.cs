@@ -1,12 +1,13 @@
+using MultiTenantTaskManager.DTOs.TaskItem;
 using MultiTenantTaskManager.Models;
 
 namespace MultiTenantTaskManager.Services;
 
 public interface ITaskItemService
 {
-    Task<IEnumerable<TaskItem>> GetAllTaskAsync(int page = 1, int pageSize = 10);
-    Task<TaskItem?> GetTaskByIdAsync(int taskId);
-    Task<TaskItem> CreateTaskAsync(TaskItem taskItem);
-    Task<TaskItem> UpdateTaskAsync(int taskId, TaskItem taskItem);
-    Task<bool> DeleteTaskAsync(int tasktId);
+    Task<IEnumerable<TaskItemDto>> GetAllTaskAsync(int page = 1, int pageSize = 10);
+    Task<TaskItemDto?> GetTaskByIdAsync(int taskId);
+    Task<TaskItemDto> CreateTaskAsync(CreateTaskItemDto dto);
+    Task<TaskItemDto> UpdateTaskAsync(int taskId, UpdateTaskItemDto dto);
+    Task<bool> DeleteTaskAsync(int taskId);
 }

@@ -1,4 +1,4 @@
-namespace MultiTenantTaskManager.DTOs;
+namespace MultiTenantTaskManager.DTOs.User;
 
 public class UpdateUserDto
 {

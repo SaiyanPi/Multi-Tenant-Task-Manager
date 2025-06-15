@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MultiTenantTaskManager.Authentication;
+using MultiTenantTaskManager.DTOs.Project;
 using MultiTenantTaskManager.Models;
 using MultiTenantTaskManager.Services;
 
@@ -21,7 +22,7 @@ public class ProjectsController : ControllerBase
     // GET:/api/projects
       [Authorize(Policy = "canManageProjects")]
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<Project>>> GetAllProjects()
+    public async Task<ActionResult<IEnumerable<ProjectDto>>> GetAllProjects()
     {
         var projects = await _projectService.GetAllProjectsAsync();
 
@@ -31,7 +32,7 @@ public class ProjectsController : ControllerBase
     // GET:/api/projects/{id}
      [Authorize(Policy = "canManageProjects")]
     [HttpGet("{id}")]
-    public async Task<ActionResult<Project>> GetProjectById(int id)
+    public async Task<ActionResult<ProjectDto>> GetProjectById(int id)
     {
         var project = await _projectService.GetProjectByIdAsync(id);
         if (project == null) return NotFound($"Project with ID {id} not found.");
@@ -42,7 +43,7 @@ public class ProjectsController : ControllerBase
     // POST:/api/projects
      [Authorize(Policy = "canManageProjects")]
     [HttpPost]
-    public async Task<ActionResult<Project>> CreateProject([FromBody] Project project)
+    public async Task<ActionResult<ProjectDto>> CreateProject([FromBody] CreateProjectDto dto)
     {
         if (!ModelState.IsValid) return BadRequest(ModelState);
 
@@ -51,7 +52,7 @@ public class ProjectsController : ControllerBase
 
         try
         {
-            var createdProject = await _projectService.CreateProjectAsync(project);
+            var createdProject = await _projectService.CreateProjectAsync(dto);
             return CreatedAtAction(nameof(GetProjectById), new { id = createdProject.Id }, createdProject);
         }
         catch (InvalidOperationException ex)
@@ -69,15 +70,15 @@ public class ProjectsController : ControllerBase
     // PUT:/api/projects/{id}
      [Authorize(Policy = "canManageProjects")]
     [HttpPut("{id}")]
-    public async Task<ActionResult<Project>> UpdateProject(int id, [FromBody] Project project)
+    public async Task<ActionResult<ProjectDto>> UpdateProject(int id, [FromBody] UpdateProjectDto dto)
     {
         if (!ModelState.IsValid) return BadRequest(ModelState);
 
-        if(id != project.Id) return BadRequest("Project ID in the URL does not match the ID in the body.");
+        if(id != dto.Id) return BadRequest("Project ID in the URL does not match the ID in the body.");
 
         try
         {
-            var updatedProject = await _projectService.UpdateProjectAsync(id, project);
+            var updatedProject = await _projectService.UpdateProjectAsync(id, dto);
             return Ok(updatedProject);
         }
         catch (KeyNotFoundException ex)

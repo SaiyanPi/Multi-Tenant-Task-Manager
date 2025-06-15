@@ -1,4 +1,4 @@
-namespace MultiTenantTaskManager.DTOs;
+namespace MultiTenantTaskManager.DTOs.Tenant;
 public class CreateTenantDto
 {
     public string Name { get; set; } = string.Empty;

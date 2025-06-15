@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using MultiTenantTaskManager.Accessor;
 using MultiTenantTaskManager.Authentication;
-using MultiTenantTaskManager.DTOs;
+using MultiTenantTaskManager.DTOs.User;
 
 namespace MultiTenantTaskManager.Services;
 
