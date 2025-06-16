@@ -9,42 +9,51 @@ using MultiTenantTaskManager.Mappers;
 using MultiTenantTaskManager.Models;
 
 namespace MultiTenantTaskManager.Services;
-public class ProjectService : IProjectService
+public class ProjectService : TenantAwareService, IProjectService
 {
     private readonly ApplicationDbContext _context;
-    private readonly ITenantAccessor _tenantAccessor;
-    private readonly IAuthorizationService _authorizationService;
-    private readonly IHttpContextAccessor _httpContextAccessor;
+    // private readonly ITenantAccessor _tenantAccessor;
+    // private readonly IAuthorizationService _authorizationService;
+    // private readonly IHttpContextAccessor _httpContextAccessor;
 
-    public ProjectService(ApplicationDbContext context, ITenantAccessor tenantAccessor,
-        IAuthorizationService authorizationService, IHttpContextAccessor httpContextAccessor)
+    public ProjectService(
+        ApplicationDbContext context,
+        ClaimsPrincipal user,
+        ITenantAccessor tenantAccessor,
+        IAuthorizationService authorizationService)
+        : base(user, tenantAccessor, authorizationService)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
-        _tenantAccessor = tenantAccessor ?? throw new ArgumentNullException(nameof(tenantAccessor));
-        _authorizationService = authorizationService ?? throw new ArgumentNullException(nameof(authorizationService));
-        _httpContextAccessor = httpContextAccessor ?? throw new ArgumentNullException(nameof(httpContextAccessor));
+        // _tenantAccessor = tenantAccessor ?? throw new ArgumentNullException(nameof(tenantAccessor));
+        // _authorizationService = authorizationService ?? throw new ArgumentNullException(nameof(authorizationService));
+        // _httpContextAccessor = httpContextAccessor ?? throw new ArgumentNullException(nameof(httpContextAccessor));
     }
-    private ClaimsPrincipal User
-    {
-        get
-        {
-            var httpContext = _httpContextAccessor.HttpContext;
-            if (httpContext == null || httpContext.User == null)
-                throw new InvalidOperationException("HttpContext or User is null.");
-            return httpContext.User;
-        }
-    }
+    // private ClaimsPrincipal User
+    // {
+    //     get
+    //     {
+    //         var httpContext = _httpContextAccessor.HttpContext;
+    //         if (httpContext == null || httpContext.User == null)
+    //             throw new InvalidOperationException("HttpContext or User is null.");
+    //         return httpContext.User;
+    //     }
+    // }
 
 
     public async Task<IEnumerable<ProjectDto>> GetAllProjectsAsync(int page = 1, int pageSize = 10)
     {
-        // Run SameTenant policy (against current user and current tenant)
-        var authResult = await _authorizationService.AuthorizeAsync(User, null, "SameTenant");
-        if (!authResult.Succeeded) throw new UnauthorizedAccessException("Forbidden: Cross-tenant access denied");
+        // // Run SameTenant policy (against current user and current tenant)
+        // var authResult = await _authorizationService.AuthorizeAsync(User, null, "SameTenant");
+        // if (!authResult.Succeeded) throw new UnauthorizedAccessException("Forbidden: Cross-tenant access denied");
+
+        await AuthorizeSameTenantAsync();
+
+        var tenantId = GetCurrentTenantId();
 
         var projects = await _context.Projects
             .AsNoTracking()
-            .Where(p => p.TenantId == _tenantAccessor.TenantId)
+            // .Where(p => p.TenantId == _tenantAccessor.TenantId)
+            .Where(p => p.TenantId == tenantId)
             .OrderBy(p => p.Name)
             .Include(p => p.Tasks)
             .Skip((page - 1) * pageSize)
@@ -57,14 +66,19 @@ public class ProjectService : IProjectService
 
     public async Task<ProjectDto?> GetProjectByIdAsync(int projectId)
     {
+        // // Run SameTenant policy
+        // var authResult = await _authorizationService.AuthorizeAsync(User, null, "SameTenant");
+        // if (!authResult.Succeeded) throw new UnauthorizedAccessException("Forbidden: Cross-tenant access denied");
+
+        await AuthorizeSameTenantAsync();
+
+        var tenantId = GetCurrentTenantId();
+
         var project = await _context.Projects
             .AsNoTracking()
-            .FirstOrDefaultAsync(p => p.Id == projectId && p.TenantId == _tenantAccessor.TenantId);
-
-        // Run SameTenant policy
-        var authResult = await _authorizationService.AuthorizeAsync(User, null, "SameTenant");
-        if (!authResult.Succeeded) throw new UnauthorizedAccessException("Forbidden: Cross-tenant access denied");
-
+            // .FirstOrDefaultAsync(p => p.Id == projectId && p.TenantId == _tenantAccessor.TenantId);
+            .FirstOrDefaultAsync(p => p.Id == projectId && p.TenantId == tenantId);
+            
         return project == null ? null : ProjectMapper.ToProjectDto(project);
     }
 
@@ -72,17 +86,23 @@ public class ProjectService : IProjectService
     {
         if (dto == null) throw new ArgumentNullException(nameof(dto));
 
-        var tenantId = _tenantAccessor.TenantId;
 
-        var authResult = await _authorizationService.AuthorizeAsync(User, null, "SameTenant");
-        if (!authResult.Succeeded) throw new UnauthorizedAccessException("Forbidden: Cross-tenant access denied");
+        // var authResult = await _authorizationService.AuthorizeAsync(User, null, "SameTenant");
+        // if (!authResult.Succeeded) throw new UnauthorizedAccessException("Forbidden: Cross-tenant access denied");
+
+        await AuthorizeSameTenantAsync();
+
+        var tenantId = GetCurrentTenantId();
 
         bool exists = await _context.Projects
             .AnyAsync(p => p.TenantId == tenantId && p.Name == dto.Name);
+
         if (exists)
             throw new InvalidOperationException($"Project '{dto.Name}' already exists.");
 
         var project = dto.ToProjectModel();
+        // project.TenantId = _tenantAccessor.TenantId;
+
         project.TenantId = tenantId;
 
         _context.Projects.Add(project);
@@ -95,13 +115,19 @@ public class ProjectService : IProjectService
     {
         if (dto == null) throw new ArgumentNullException(nameof(dto));
 
-        // Run SameTenant policy before mutations
-        var authResult = await _authorizationService.AuthorizeAsync(User, null, "SameTenant");
-        if (!authResult.Succeeded) throw new UnauthorizedAccessException("Forbidden: Cross-tenant access denied");
+        await AuthorizeSameTenantAsync();
+
+        var tenantId = GetCurrentTenantId();
+
+        // // Run SameTenant policy before mutations
+        // var authResult = await _authorizationService.AuthorizeAsync(User, null, "SameTenant");
+        // if (!authResult.Succeeded) throw new UnauthorizedAccessException("Forbidden: Cross-tenant access denied");
 
         // var existingProject = await GetProjectByIdAsync(projectId);
         var existingProject = await _context.Projects
-            .FirstOrDefaultAsync(p => p.Id == projectId && p.TenantId == _tenantAccessor.TenantId);
+            // .FirstOrDefaultAsync(p => p.Id == projectId && p.TenantId == _tenantAccessor.TenantId);
+            .FirstOrDefaultAsync(p => p.Id == projectId && p.TenantId == tenantId);
+
         if (existingProject == null)
         {
             throw new KeyNotFoundException($"Project {dto.Id} not found.");
@@ -116,19 +142,20 @@ public class ProjectService : IProjectService
 
     public async Task<bool> DeleteProjectAsync(int projectId)
     {
+        // // Run SameTenant policy
+        // var authResult = await _authorizationService.AuthorizeAsync(User, null, "SameTenant");
+        // if (!authResult.Succeeded) throw new UnauthorizedAccessException("Forbidden: Cross-tenant access denied");
+        
+        await AuthorizeSameTenantAsync();
+
+        var tenantId = GetCurrentTenantId();
+
         // var project = await GetProjectByIdAsync(projectId);
         var project = await _context.Projects
-            .FirstOrDefaultAsync(p => p.Id == projectId && p.TenantId == _tenantAccessor.TenantId);
+            // .FirstOrDefaultAsync(p => p.Id == projectId && p.TenantId == _tenantAccessor.TenantId);
+            .FirstOrDefaultAsync(p => p.Id == projectId && p.TenantId == tenantId);
+
         if (project == null) return false;
-
-        // Run SameTenant policy
-        var authResult = await _authorizationService.AuthorizeAsync(User, null, "SameTenant");
-        if (!authResult.Succeeded) throw new UnauthorizedAccessException("Forbidden: Cross-tenant access denied");
-
-        if (project.TenantId != _tenantAccessor.TenantId)
-        {
-            throw new UnauthorizedAccessException("Forbidden: Cross-tenant delete denied");
-        }
 
         _context.Projects.Remove(project);
         await _context.SaveChangesAsync();

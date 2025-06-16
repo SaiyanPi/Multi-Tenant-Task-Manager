@@ -16,21 +16,33 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     {
         base.OnModelCreating(builder);
         // configuring relationships
+
+        // Tenant → Users (Required, Restrict)
         builder.Entity<Tenant>()
             .HasMany(t => t.Users)
             .WithOne(u => u.Tenant)
-            .HasForeignKey(u => u.TenantId);
+            .HasForeignKey(u => u.TenantId)
+            .IsRequired()
+            .OnDelete(DeleteBehavior.Restrict);
+            //.OnDelete(DeleteBehavior.Cascade); // Optional: cascade user deletion with tenant;
 
+        // Tenant → Projects (Required, Cascade)
         builder.Entity<Tenant>()
             .HasMany(t => t.Projects)
             .WithOne(p => p.Tenant)
-            .HasForeignKey(p => p.TenantId);
+            .HasForeignKey(p => p.TenantId)
+            .IsRequired()
+            .OnDelete(DeleteBehavior.Cascade); // Deletes all projects when tenant is deleted
 
+        // Project → Tasks (Required, Cascade)
         builder.Entity<Project>()
             .HasMany(p => p.Tasks)
             .WithOne(t => t.Project)
-            .HasForeignKey(t => t.ProjectId);
+            .HasForeignKey(t => t.ProjectId)
+            .IsRequired()
+            .OnDelete(DeleteBehavior.Cascade); // Deletes all tasks when project is deleted
 
+        // TaskItem → Tenant (Required, Restrict)
         builder.Entity<TaskItem>()
             .HasOne(t => t.Tenant)
             .WithMany()

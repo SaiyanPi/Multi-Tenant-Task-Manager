@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using System.Text;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -89,6 +90,17 @@ builder.Services.AddAuthorization(options =>
 builder.Services.AddScoped<IAuthorizationHandler, SameTenantHandler>();
 
 builder.Services.AddHttpContextAccessor(); // Needed for IHttpContextAccessor
+
+builder.Services.AddScoped<ClaimsPrincipal>(provider =>
+{
+    var httpContextAccessor = provider.GetRequiredService<IHttpContextAccessor>();
+    var user = httpContextAccessor.HttpContext?.User;
+
+    return user ?? new ClaimsPrincipal(new ClaimsIdentity());
+});
+
+// builder.Services.AddScoped<ClaimsPrincipal>(sp =>
+//     sp.GetRequiredService<IHttpContextAccessor>().HttpContext?.User ?? new ClaimsPrincipal());
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
