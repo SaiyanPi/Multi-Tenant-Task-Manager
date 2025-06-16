@@ -88,6 +88,11 @@ public class TaskItemService : ITaskItemService
             .FirstOrDefaultAsync(t => t.Id == taskId && t.TenantId == _tenantAccessor.TenantId);
         if (task == null) return false;
 
+        if(task.TenantId != _tenantAccessor.TenantId)
+        {
+            throw new UnauthorizedAccessException("Forbidden: Cross-tenant delete denied");
+        }
+        
         _context.TaskItems.Remove(task);
         await _context.SaveChangesAsync();
 

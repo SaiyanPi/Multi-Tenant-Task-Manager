@@ -38,9 +38,14 @@ public class ProjectService : IProjectService
 
     public async Task<IEnumerable<ProjectDto>> GetAllProjectsAsync(int page = 1, int pageSize = 10)
     {
+        // Run SameTenant policy (against current user and current tenant)
+        var authResult = await _authorizationService.AuthorizeAsync(User, null, "SameTenant");
+        if (!authResult.Succeeded) throw new UnauthorizedAccessException("Forbidden: Cross-tenant access denied");
+
         var projects = await _context.Projects
             .AsNoTracking()
             .Where(p => p.TenantId == _tenantAccessor.TenantId)
+            .OrderBy(p => p.Name)
             .Include(p => p.Tasks)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
@@ -57,35 +62,42 @@ public class ProjectService : IProjectService
             .FirstOrDefaultAsync(p => p.Id == projectId && p.TenantId == _tenantAccessor.TenantId);
 
         // Run SameTenant policy
-        // var authResult = await _authorizationService.AuthorizeAsync(User, null, "SameTenant");
-        // if (!authResult.Succeeded) throw new UnauthorizedAccessException("Forbidden: Cross-tenant access denied");
+        var authResult = await _authorizationService.AuthorizeAsync(User, null, "SameTenant");
+        if (!authResult.Succeeded) throw new UnauthorizedAccessException("Forbidden: Cross-tenant access denied");
 
         return project == null ? null : ProjectMapper.ToProjectDto(project);
     }
 
     public async Task<ProjectDto> CreateProjectAsync(CreateProjectDto dto)
-{
-    if (dto == null) throw new ArgumentNullException(nameof(dto));
+    {
+        if (dto == null) throw new ArgumentNullException(nameof(dto));
 
-    var tenantId = _tenantAccessor.TenantId;
+        var tenantId = _tenantAccessor.TenantId;
 
-    bool exists = await _context.Projects
-        .AnyAsync(p => p.TenantId == tenantId && p.Name == dto.Name);
-    if (exists)
-        throw new InvalidOperationException($"Project '{dto.Name}' already exists.");
+        var authResult = await _authorizationService.AuthorizeAsync(User, null, "SameTenant");
+        if (!authResult.Succeeded) throw new UnauthorizedAccessException("Forbidden: Cross-tenant access denied");
 
-    var project = dto.ToProjectModel();
-    project.TenantId = tenantId;
+        bool exists = await _context.Projects
+            .AnyAsync(p => p.TenantId == tenantId && p.Name == dto.Name);
+        if (exists)
+            throw new InvalidOperationException($"Project '{dto.Name}' already exists.");
 
-    _context.Projects.Add(project);
-    await _context.SaveChangesAsync();
+        var project = dto.ToProjectModel();
+        project.TenantId = tenantId;
 
-    return ProjectMapper.ToProjectDto(project);
-}
+        _context.Projects.Add(project);
+        await _context.SaveChangesAsync();
+
+        return ProjectMapper.ToProjectDto(project);
+    }
 
     public async Task<ProjectDto> UpdateProjectAsync(int projectId, UpdateProjectDto dto)
     {
         if (dto == null) throw new ArgumentNullException(nameof(dto));
+
+        // Run SameTenant policy before mutations
+        var authResult = await _authorizationService.AuthorizeAsync(User, null, "SameTenant");
+        if (!authResult.Succeeded) throw new UnauthorizedAccessException("Forbidden: Cross-tenant access denied");
 
         // var existingProject = await GetProjectByIdAsync(projectId);
         var existingProject = await _context.Projects
@@ -108,6 +120,15 @@ public class ProjectService : IProjectService
         var project = await _context.Projects
             .FirstOrDefaultAsync(p => p.Id == projectId && p.TenantId == _tenantAccessor.TenantId);
         if (project == null) return false;
+
+        // Run SameTenant policy
+        var authResult = await _authorizationService.AuthorizeAsync(User, null, "SameTenant");
+        if (!authResult.Succeeded) throw new UnauthorizedAccessException("Forbidden: Cross-tenant access denied");
+
+        if (project.TenantId != _tenantAccessor.TenantId)
+        {
+            throw new UnauthorizedAccessException("Forbidden: Cross-tenant delete denied");
+        }
 
         _context.Projects.Remove(project);
         await _context.SaveChangesAsync();

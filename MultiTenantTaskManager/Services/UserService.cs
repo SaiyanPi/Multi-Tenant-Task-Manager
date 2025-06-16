@@ -89,6 +89,8 @@ public class UserService : IUserService
         var user = await _userManager.FindByIdAsync(userId);
         if (user == null) return false;
 
+        
+
         var deleteResult = await _userManager.DeleteAsync(user);
         return deleteResult.Succeeded;
     }
