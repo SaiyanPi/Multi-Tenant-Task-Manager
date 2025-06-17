@@ -1,3 +1,5 @@
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -7,21 +9,26 @@ using MultiTenantTaskManager.DTOs.User;
 
 namespace MultiTenantTaskManager.Services;
 
-public class UserService : IUserService
+public class UserService : TenantAwareService, IUserService
 {
     private readonly UserManager<ApplicationUser> _userManager;
-    private readonly ITenantAccessor _tenantAccessor;
 
-
-    public UserService(UserManager<ApplicationUser> userManager, ITenantAccessor tenantAccessor)
+    public UserService(
+        UserManager<ApplicationUser> userManager,
+        ClaimsPrincipal user,
+        ITenantAccessor tenantAccessor,
+        IAuthorizationService authorizationService
+       ) : base(user, tenantAccessor, authorizationService)
     {
         _userManager = userManager ?? throw new ArgumentNullException(nameof(userManager));
-        _tenantAccessor = tenantAccessor ?? throw new ArgumentNullException(nameof(tenantAccessor));
     }
 
     public async Task<IEnumerable<UserDto>> GetAllUsersForTenantAsync(int page = 1, int pageSize = 10)
     {
-        var tenantId = _tenantAccessor.TenantId;
+        await AuthorizeSameTenantAsync();
+
+        var tenantId = GetCurrentTenantId();
+
         // Filter users by tenantId
         var users = await _userManager.Users
             .AsNoTracking()
@@ -43,6 +50,8 @@ public class UserService : IUserService
 
     public async Task<UserDto> GetUserByIdAsync(string userId)
     {
+        await AuthorizeSameTenantAsync();
+        
         var user = await _userManager.FindByIdAsync(userId);
         if (user == null) throw new InvalidOperationException($"User with ID '{userId}' not found.");
 
@@ -52,11 +61,14 @@ public class UserService : IUserService
 
     public async Task<UserDto> UpdateUserAsync(string userId, UpdateUserDto dto)
     {
+        await AuthorizeSameTenantAsync();
+
         if (dto == null) throw new ArgumentNullException(nameof(dto));
 
         var user = await _userManager.FindByIdAsync(userId);
         if (user == null)
             throw new InvalidOperationException($"User with ID '{userId}' not found.");
+
         // Validate roles
         var validRoles = new[] {
             AppRoles.SuperAdmin,
@@ -86,10 +98,10 @@ public class UserService : IUserService
 
     public async Task<bool> DeleteUserAsync(string userId)
     {
+        await AuthorizeSameTenantAsync();
+
         var user = await _userManager.FindByIdAsync(userId);
         if (user == null) return false;
-
-        
 
         var deleteResult = await _userManager.DeleteAsync(user);
         return deleteResult.Succeeded;
