@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text.Json;
 using Azure;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
@@ -13,15 +14,18 @@ namespace MultiTenantTaskManager.Services;
 public class TaskItemService : TenantAwareService, ITaskItemService
 {
     private readonly ApplicationDbContext _context;
+    private readonly IAuditService _auditService;
 
     public TaskItemService(
         ApplicationDbContext context,
         ClaimsPrincipal user,
         ITenantAccessor tenantAccessor,
-        IAuthorizationService authorizationService)
+        IAuthorizationService authorizationService,
+        IAuditService auditService)
         : base(user, tenantAccessor, authorizationService)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
+        _auditService = auditService ?? throw new ArgumentNullException(nameof(auditService));
     }
 
     public async Task<IEnumerable<TaskItemDto>> GetAllTaskAsync(int page = 1, int pageSize = 10)
@@ -83,6 +87,20 @@ public class TaskItemService : TenantAwareService, ITaskItemService
         _context.TaskItems.Add(taskItem);
         await _context.SaveChangesAsync();
 
+        // AuditLog
+        // await _auditService.LogAsync("Create", "TaskItem", taskItem.Id.ToString(), JsonSerializer.Serialize(taskItem));
+        await _auditService.LogAsync(
+            action: "Create",
+            entityName: "TaskItem",
+            entityId: taskItem.Id.ToString(),
+            // following line is commented because taskItem is an EF Core entity — and it still includes
+            // navigation properties (like .Project → Tasks → Project...), which causes the serialization
+            // cycle. so we have to use DTOs for Logging too.
+            // changes: JsonSerializer.Serialize(taskItem),
+            changes: JsonSerializer.Serialize(TaskItemMapper.ToTaskItemDto(taskItem))
+        );
+
+
         return TaskItemMapper.ToTaskItemDto(taskItem);
     }
 
@@ -97,14 +115,41 @@ public class TaskItemService : TenantAwareService, ITaskItemService
         // taskItem.TenantId = _tenantAccessor.TenantId; // <-- Enforce correct TenantId
         // var existingTask = await GetTaskByIdAsync(taskId);
         var existingTask = await _context.TaskItems
+            .AsNoTracking()
             .FirstOrDefaultAsync(t => t.Id == taskId && t.TenantId == tenantId);
         if (existingTask == null)
         {
             throw new KeyNotFoundException($"Task with ID {dto.Id} not found.");
         }
 
-        existingTask.UpdateFromDto(dto);
+        // original task DTO snapshot before update
+        var originalTaskDto = TaskItemMapper.ToTaskItemDto(existingTask);
+
+        // Now retrieve it again for tracking changes
+        var trackedTask = await _context.TaskItems
+            .FirstAsync(t => t.Id == taskId && t.TenantId == tenantId);
+
+        // existingTask.UpdateFromDto(dto);
+        trackedTask.UpdateFromDto(dto);
+
         await _context.SaveChangesAsync();
+
+        // task DTO after update
+        var updatedTaskDto = TaskItemMapper.ToTaskItemDto(trackedTask);
+
+        // Log both old and new state
+        var auditData = new
+        {
+            Original = originalTaskDto,
+            Updated = updatedTaskDto
+        };
+
+        await _auditService.LogAsync(
+            action: "Update",
+            entityName: "TaskItem",
+            entityId: existingTask.Id.ToString(),
+            changes: JsonSerializer.Serialize(auditData)
+        );
 
         return TaskItemMapper.ToTaskItemDto(existingTask);
     }
@@ -125,8 +170,19 @@ public class TaskItemService : TenantAwareService, ITaskItemService
             throw new UnauthorizedAccessException("Forbidden: Cross-tenant delete denied");
         }
         
+        // task DTO before deletion
+        var deletedTaskDto = TaskItemMapper.ToTaskItemDto(task);
+
         _context.TaskItems.Remove(task);
         await _context.SaveChangesAsync();
+
+        // audit Log the after deletion
+        await _auditService.LogAsync(
+            action: "Delete",
+            entityName: "TaskItem",
+            entityId: task.Id.ToString(),
+            changes: JsonSerializer.Serialize(deletedTaskDto)
+        );
 
         return true;
     }

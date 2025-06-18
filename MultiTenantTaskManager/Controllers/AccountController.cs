@@ -262,6 +262,9 @@ public class AccountController : ControllerBase
             new(ClaimTypes.NameIdentifier, user.Id),
             new(ClaimTypes.Email, user.Email ?? string.Empty),
             
+            // UserName claim added for Auditing and Logging
+            new(ClaimTypes.Name, user.UserName ?? string.Empty),
+            
             // For Tenant-Specific Access: include the user's tenant ID in the JWT token
             new("tenant_id", user.TenantId?.ToString() ?? string.Empty) 
         };

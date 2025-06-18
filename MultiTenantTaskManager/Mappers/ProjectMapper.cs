@@ -12,7 +12,8 @@ public static class ProjectMapper
         {
             Id = project.Id,
             Name = project.Name,
-            TenantId = project.TenantId
+            TenantId = project.TenantId,
+            Tasks = project.Tasks?.Select(t => t.ToTaskItemDto()).ToList() ?? new()
         };
     }
 

@@ -53,7 +53,10 @@ builder.Services.AddAuthentication(options =>
         ValidateAudience = true,
         ValidAudience = audience,
         ValidIssuer = issuer,
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret))
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret)),
+        // // This is what tells ASP.NET to use ClaimTypes.Name as Identity.Name
+        // NameClaimType = ClaimTypes.Name,
+        // RoleClaimType = ClaimTypes.Role,
     };
 });
 
@@ -85,6 +88,12 @@ builder.Services.AddAuthorization(options =>
     // RESOURCE BASED AUTHORIZATION (Tenant-specific policy)
     options.AddPolicy("SameTenant", policy =>
         policy.Requirements.Add(new SameTenantRequirement()));
+
+    options.AddPolicy("AdminWithinTenant", policy =>
+    {
+        policy.RequireRole("Admin");
+        policy.Requirements.Add(new SameTenantRequirement());
+    });
 });
 
 builder.Services.AddScoped<IAuthorizationHandler, SameTenantHandler>();
@@ -109,6 +118,7 @@ builder.Services.AddScoped<ITenantService, TenantService>();
 builder.Services.AddScoped<IProjectService, ProjectService>();
 builder.Services.AddScoped<ITaskItemService, TaskItemService>();
 builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IAuditService, AuditService>();
 
 var app = builder.Build();
 

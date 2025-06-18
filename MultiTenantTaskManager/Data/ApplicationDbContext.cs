@@ -11,6 +11,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<Tenant> Tenants { get; set; }
     public DbSet<Project> Projects { get; set; }
     public DbSet<TaskItem> TaskItems { get; set; }
+    public DbSet<AuditLog> AuditLogs { get; set; } // For tracking changes
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -24,7 +25,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             .HasForeignKey(u => u.TenantId)
             .IsRequired()
             .OnDelete(DeleteBehavior.Restrict);
-            //.OnDelete(DeleteBehavior.Cascade); // Optional: cascade user deletion with tenant;
+        //.OnDelete(DeleteBehavior.Cascade); // Optional: cascade user deletion with tenant;
 
         // Tenant → Projects (Required, Cascade)
         builder.Entity<Tenant>()
@@ -48,7 +49,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             .WithMany()
             .HasForeignKey(t => t.TenantId)
             .OnDelete(DeleteBehavior.Restrict); // this prevents cascading deletes from Tenant to TaskItem
-            // directly because we already have cascade delete from Tenant->Project->TaskItem
+                                                // directly because we already have cascade delete from Tenant->Project->TaskItem
     }
     
 }
