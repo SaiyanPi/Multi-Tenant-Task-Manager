@@ -12,7 +12,11 @@ public static class TaskItemMapper
             Id = entity.Id,
             Titles = entity.Titles,
             ProjectId = entity.ProjectId,
-            TenantId = entity.TenantId
+            TenantId = entity.TenantId,
+            IsDeleted = entity.IsDeleted,
+            DeletedAt = entity.DeletedAt,
+            DeletedBy = entity.DeletedBy
+            
         };
     }
 

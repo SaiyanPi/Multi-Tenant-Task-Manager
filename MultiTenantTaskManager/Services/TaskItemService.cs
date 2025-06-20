@@ -15,17 +15,20 @@ public class TaskItemService : TenantAwareService, ITaskItemService
 {
     private readonly ApplicationDbContext _context;
     private readonly IAuditService _auditService;
+    private readonly IUserAccessor _userAccessor;
 
     public TaskItemService(
         ApplicationDbContext context,
         ClaimsPrincipal user,
         ITenantAccessor tenantAccessor,
         IAuthorizationService authorizationService,
-        IAuditService auditService)
+        IAuditService auditService,
+        IUserAccessor userAccessor)
         : base(user, tenantAccessor, authorizationService)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
         _auditService = auditService ?? throw new ArgumentNullException(nameof(auditService));
+        _userAccessor = userAccessor ?? throw new ArgumentNullException(nameof(userAccessor));
     }
 
     public async Task<IEnumerable<TaskItemDto>> GetAllTaskAsync(int page = 1, int pageSize = 10)
@@ -167,7 +170,14 @@ public class TaskItemService : TenantAwareService, ITaskItemService
         // task DTO before deletion
         var deletedTaskDto = TaskItemMapper.ToTaskItemDto(task);
 
-        _context.TaskItems.Remove(task);
+        // _context.TaskItems.Remove(task);
+        // await _context.SaveChangesAsync();
+
+        // Perform soft delete instead
+        task.IsDeleted = true;
+        task.DeletedAt = DateTime.UtcNow;
+        task.DeletedBy = _userAccessor.UserName ?? "Unknown";
+
         await _context.SaveChangesAsync();
 
         // audit Log the after deletion

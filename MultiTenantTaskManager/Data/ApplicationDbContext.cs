@@ -1,7 +1,9 @@
+using System.Linq.Expressions;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using MultiTenantTaskManager.Authentication;
 using MultiTenantTaskManager.Models;
+using MultiTenantTaskManager.Services;
 
 namespace MultiTenantTaskManager.Data;
 
@@ -50,6 +52,36 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             .HasForeignKey(t => t.TenantId)
             .OnDelete(DeleteBehavior.Restrict); // this prevents cascading deletes from Tenant to TaskItem
                                                 // directly because we already have cascade delete from Tenant->Project->TaskItem
+
+    // ----------------------------------------------------------------------------------------------------
+
+        // Adding a global query filter for soft deletion
+        // This ensures IsDeleted = false by default for all queries unless explicitly overridden
+
+        foreach (var entityType in builder.Model.GetEntityTypes())
+        {
+            var clrType = entityType.ClrType;
+            if (typeof(ISoftDeletable).IsAssignableFrom(clrType))
+            {
+                var parameter = Expression.Parameter(clrType, "e");
+                var propertyMethod = typeof(EF).GetMethod(nameof(EF.Property))?
+                    .MakeGenericMethod(typeof(bool));
+
+                var isDeletedProperty = Expression.Call(
+                    propertyMethod!,
+                    parameter,
+                    Expression.Constant(nameof(ISoftDeletable.IsDeleted))
+                );
+
+                var compareExpression = Expression.Equal(isDeletedProperty, Expression.Constant(false));
+                var lambda = Expression.Lambda(compareExpression, parameter);
+
+                // ignores soft-deleted records by default using global query filters
+                builder.Entity(clrType).HasQueryFilter(lambda);
+                // eg, builder.Entity<TaskItem>().HasQueryFilter(t => !t.IsDeleted) 
+            }
+        }
     }
-    
+
 }
+

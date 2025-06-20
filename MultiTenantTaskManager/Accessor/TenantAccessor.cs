@@ -26,7 +26,7 @@ public class TenantAccessor : ITenantAccessor
             if (user?.Identity?.IsAuthenticated == true &&
                 user.IsInRole("SuperAdmin"))
             {
-                throw new InvalidOperationException("SuperAdmin does not have a tenant context.");
+                throw new InvalidOperationException("SuperAdmin should not have a tenant context.");
             }
 
             // If request contains header → parse it

@@ -18,6 +18,6 @@ public class AuditLog
 
     // Timestamp of the action
     public DateTime Timestamp { get; set; } = DateTime.UtcNow;
-    public Guid? TenantId { get; set; }
+    public Guid? TenantId { get; set; } // nullable because super admin does not belong to any tenant
     public string Changes { get; set; } = string.Empty; // JSON or text representation of changes made
 }
