@@ -18,6 +18,6 @@ public class AuditLog
 
     // Timestamp of the action
     public DateTime Timestamp { get; set; } = DateTime.UtcNow;
-    public Guid TenantId { get; set; }
+    public Guid? TenantId { get; set; }
     public string Changes { get; set; } = string.Empty; // JSON or text representation of changes made
 }

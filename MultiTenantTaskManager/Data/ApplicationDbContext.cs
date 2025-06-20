@@ -23,7 +23,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             .HasMany(t => t.Users)
             .WithOne(u => u.Tenant)
             .HasForeignKey(u => u.TenantId)
-            .IsRequired()
+            // .IsRequired()    // doesn't require for super admin user
             .OnDelete(DeleteBehavior.Restrict);
         //.OnDelete(DeleteBehavior.Cascade); // Optional: cascade user deletion with tenant;
 

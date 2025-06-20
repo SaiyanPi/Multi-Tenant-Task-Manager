@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using MultiTenantTaskManager.Accessor;
+using MultiTenantTaskManager.Authentication;
 using MultiTenantTaskManager.Data;
 using MultiTenantTaskManager.Models;
 
@@ -21,12 +22,32 @@ public class AuditService : IAuditService
     public async Task LogAsync(string action, string entityName, string entityId, string changes)
     {
         var user = _httpContextAccessor.HttpContext?.User;
-        var tenantId = _tenantAccessor.TenantId;
 
-        if (user == null || tenantId == Guid.Empty)
+        // check if the user is a SuperAdmin, if yes then assign the TenantId to null because
+        // SuperAdmin lives outside Tenant scope
+        var userRole = user?.Claims
+            .FirstOrDefault(c => c.Type == ClaimTypes.Role)?.Value;
+        Console.WriteLine($"User Role: {userRole}");
+        if (userRole == AppRoles.SuperAdmin)
         {
-            return; // No user or tenant context available
+            var superAdminAudit = new AuditLog
+            {
+                UserId = user?.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? string.Empty,
+                UserName = user?.Identity?.Name ?? string.Empty,
+                Action = action,
+                EntityName = entityName,
+                EntityId = entityId,
+                Changes = changes,
+                TenantId = null // assign null to TenantId for SuperAdmin
+            };
+
+            _dbContext.AuditLogs.Add(superAdminAudit);
+            await _dbContext.SaveChangesAsync();
+            return; // end the execution
         }
+
+        // For regular users, we need to get the TenantId from the TenantAccessor
+        var tenantId = _tenantAccessor.TenantId;
 
         var audit = new AuditLog
         {

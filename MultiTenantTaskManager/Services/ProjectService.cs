@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using MultiTenantTaskManager.Accessor;
@@ -15,15 +16,18 @@ public class ProjectService : TenantAwareService, IProjectService
     // private readonly ITenantAccessor _tenantAccessor;
     // private readonly IAuthorizationService _authorizationService;
     // private readonly IHttpContextAccessor _httpContextAccessor;
-
+    private readonly IAuditService _auditService;
+    
     public ProjectService(
         ApplicationDbContext context,
         ClaimsPrincipal user,
         ITenantAccessor tenantAccessor,
-        IAuthorizationService authorizationService)
+        IAuthorizationService authorizationService,
+        IAuditService auditService)
         : base(user, tenantAccessor, authorizationService)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
+        _auditService = auditService ?? throw new ArgumentNullException(nameof(auditService));
         // _tenantAccessor = tenantAccessor ?? throw new ArgumentNullException(nameof(tenantAccessor));
         // _authorizationService = authorizationService ?? throw new ArgumentNullException(nameof(authorizationService));
         // _httpContextAccessor = httpContextAccessor ?? throw new ArgumentNullException(nameof(httpContextAccessor));
@@ -108,6 +112,14 @@ public class ProjectService : TenantAwareService, IProjectService
         _context.Projects.Add(project);
         await _context.SaveChangesAsync();
 
+        // AuditLog
+        await _auditService.LogAsync(
+            action: "Create",
+            entityName: "Project",
+            entityId: project.Id.ToString(),
+            changes: JsonSerializer.Serialize(ProjectMapper.ToProjectDto(project))
+        );
+
         return ProjectMapper.ToProjectDto(project);
     }
 
@@ -133,8 +145,33 @@ public class ProjectService : TenantAwareService, IProjectService
             throw new KeyNotFoundException($"Project {dto.Id} not found.");
         }
 
-        existingProject.UpdateFromDto(dto);
+        // original project DTO snapshot before update
+        var originalProjectDto = ProjectMapper.ToProjectDto(existingProject);
+
+        // Now retrieve it again for tracking changes
+        var trackedProject = await _context.Projects
+            .FirstAsync(p => p.Id == projectId && p.TenantId == tenantId);
+
+        trackedProject.UpdateFromDto(dto);
+
         await _context.SaveChangesAsync();
+
+        // project DTO after update
+        var updatedProjectDto = ProjectMapper.ToProjectDto(trackedProject);
+
+        // Log both old and new state
+        var auditData = new
+        {
+            Original = originalProjectDto,
+            Updated = updatedProjectDto
+        };
+
+        await _auditService.LogAsync(
+            action: "Update",
+            entityName: "Project",
+            entityId: existingProject.Id.ToString(),
+            changes: JsonSerializer.Serialize(auditData)
+        );
 
         return ProjectMapper.ToProjectDto(existingProject);
     }
@@ -157,8 +194,19 @@ public class ProjectService : TenantAwareService, IProjectService
 
         if (project == null) return false;
 
+        // project DTO before deletion
+        var deletedProjectDto = ProjectMapper.ToProjectDto(project);
+
         _context.Projects.Remove(project);
         await _context.SaveChangesAsync();
+
+        // audit Log the after deletion
+        await _auditService.LogAsync(
+            action: "Delete",
+            entityName: "Project",
+            entityId: project.Id.ToString(),
+            changes: JsonSerializer.Serialize(deletedProjectDto)
+        );
 
         return true;
     }

@@ -131,7 +131,6 @@ public class TaskItemService : TenantAwareService, ITaskItemService
 
         // existingTask.UpdateFromDto(dto);
         trackedTask.UpdateFromDto(dto);
-
         await _context.SaveChangesAsync();
 
         // task DTO after update
@@ -164,11 +163,6 @@ public class TaskItemService : TenantAwareService, ITaskItemService
         var task = await _context.TaskItems
             .FirstOrDefaultAsync(t => t.Id == taskId && t.TenantId == tenantId);
         if (task == null) return false;
-
-        if(task.TenantId != tenantId)
-        {
-            throw new UnauthorizedAccessException("Forbidden: Cross-tenant delete denied");
-        }
         
         // task DTO before deletion
         var deletedTaskDto = TaskItemMapper.ToTaskItemDto(task);
