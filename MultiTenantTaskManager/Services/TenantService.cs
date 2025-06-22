@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using MultiTenantTaskManager.Accessor;
 using MultiTenantTaskManager.Data;
 using MultiTenantTaskManager.DTOs.Tenant;
 using MultiTenantTaskManager.Mappers;
@@ -11,11 +12,15 @@ public class TenantService : ITenantService
 {
     private readonly ApplicationDbContext _context;
     private readonly IAuditService _auditService;
-    public TenantService(ApplicationDbContext context, IAuditService auditService)
+    private readonly IUserAccessor _userAccessor;
+
+    public TenantService(ApplicationDbContext context, IAuditService auditService, IUserAccessor userAccessor)
     {
         // ensures dependency injection is working properly, helps to debug early
         _context = context ?? throw new ArgumentNullException(nameof(context));
         _auditService = auditService ?? throw new ArgumentNullException(nameof(auditService));
+        _userAccessor = userAccessor ?? throw new ArgumentNullException(nameof(userAccessor));
+
     }
 
     public async Task<IEnumerable<TenantDto>> GetAllTenantsAsync(int page = 1, int pageSize = 10)
@@ -114,7 +119,11 @@ public class TenantService : ITenantService
         // task DTO before deletion
         var deletedTenantDto = TenantMapper.ToTenantDto(tenant);
 
-        _context.Tenants.Remove(tenant);
+        // _context.Tenants.Remove(tenant);
+        // Soft delete
+        tenant.IsDeleted = true;
+        tenant.DeletedAt = DateTime.UtcNow;
+        tenant.DeletedBy = _userAccessor.UserName ?? "Unknown";
         await _context.SaveChangesAsync();
 
         // audit Log the after deletion

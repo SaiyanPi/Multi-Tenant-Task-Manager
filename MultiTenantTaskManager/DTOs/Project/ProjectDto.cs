@@ -16,4 +16,10 @@ public class ProjectDto
 
     // Collection navigation property for related TaskItems
     public ICollection<TaskItemDto> Tasks { get; set; } = new List<TaskItemDto>();
+
+
+    // soft delete
+    public bool IsDeleted { get; set; }
+    public DateTime? DeletedAt { get; set; }
+    public string? DeletedBy { get; set; }
 }

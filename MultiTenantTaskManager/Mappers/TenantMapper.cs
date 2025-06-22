@@ -10,7 +10,11 @@ public static class TenantMapper
         Id = tenant.Id,
         Name = tenant.Name,
         Domain = tenant.Domain,
-         Projects = tenant.Projects?.Select(p => p.ToProjectDto()).ToList() ?? new()
+        // soft delete properties
+        IsDeleted = tenant.IsDeleted,
+        DeletedAt = tenant.DeletedAt,
+        DeletedBy = tenant.DeletedBy,
+        Projects = tenant.Projects?.Select(p => p.ToProjectDto()).ToList() ?? new()
     };
 
     public static Tenant ToTenantModel(this CreateTenantDto dto) => new Tenant

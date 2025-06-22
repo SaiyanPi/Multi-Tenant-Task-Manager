@@ -171,9 +171,7 @@ public class TaskItemService : TenantAwareService, ITaskItemService
         var deletedTaskDto = TaskItemMapper.ToTaskItemDto(task);
 
         // _context.TaskItems.Remove(task);
-        // await _context.SaveChangesAsync();
-
-        // Perform soft delete instead
+        // Soft delete
         task.IsDeleted = true;
         task.DeletedAt = DateTime.UtcNow;
         task.DeletedBy = _userAccessor.UserName ?? "Unknown";

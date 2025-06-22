@@ -13,6 +13,7 @@ public static class TaskItemMapper
             Titles = entity.Titles,
             ProjectId = entity.ProjectId,
             TenantId = entity.TenantId,
+            // soft delete properties
             IsDeleted = entity.IsDeleted,
             DeletedAt = entity.DeletedAt,
             DeletedBy = entity.DeletedBy

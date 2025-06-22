@@ -17,13 +17,15 @@ public class ProjectService : TenantAwareService, IProjectService
     // private readonly IAuthorizationService _authorizationService;
     // private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuditService _auditService;
-    
+    private readonly IUserAccessor _userAccessor;
+
     public ProjectService(
         ApplicationDbContext context,
         ClaimsPrincipal user,
         ITenantAccessor tenantAccessor,
         IAuthorizationService authorizationService,
-        IAuditService auditService)
+        IAuditService auditService,
+        IUserAccessor userAccessor)
         : base(user, tenantAccessor, authorizationService)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
@@ -31,7 +33,9 @@ public class ProjectService : TenantAwareService, IProjectService
         // _tenantAccessor = tenantAccessor ?? throw new ArgumentNullException(nameof(tenantAccessor));
         // _authorizationService = authorizationService ?? throw new ArgumentNullException(nameof(authorizationService));
         // _httpContextAccessor = httpContextAccessor ?? throw new ArgumentNullException(nameof(httpContextAccessor));
-    }
+        _userAccessor = userAccessor ?? throw new ArgumentNullException(nameof(userAccessor));
+    }   
+    // Uncomment if you need to access User directly
     // private ClaimsPrincipal User
     // {
     //     get
@@ -197,7 +201,13 @@ public class ProjectService : TenantAwareService, IProjectService
         // project DTO before deletion
         var deletedProjectDto = ProjectMapper.ToProjectDto(project);
 
-        _context.Projects.Remove(project);
+        // _context.Projects.Remove(project);
+
+        // Soft delete
+        project.IsDeleted = true;
+        project.DeletedAt = DateTime.UtcNow;
+        project.DeletedBy = _userAccessor.UserName ?? "Unknown";
+
         await _context.SaveChangesAsync();
 
         // audit Log the after deletion
