@@ -7,5 +7,8 @@ public class UserDto
     public Guid TenantId { get; set; }
     public List<string> Roles { get; set; } = new List<string>();
 
-    // Additional properties can be added as needed
+    // soft delete
+    // public bool IsDeleted { get; set; }
+    // public DateTime? DeletedAt { get; set; }
+    // public string? DeletedBy { get; set; }
 }

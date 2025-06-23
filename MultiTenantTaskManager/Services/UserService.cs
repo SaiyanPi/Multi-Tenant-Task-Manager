@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using MultiTenantTaskManager.Accessor;
 using MultiTenantTaskManager.Authentication;
 using MultiTenantTaskManager.DTOs.User;
+using MultiTenantTaskManager.Mappers;
 
 namespace MultiTenantTaskManager.Services;
 
@@ -42,7 +43,9 @@ public class UserService : TenantAwareService, IUserService
         foreach (var user in users)
         {
             var roles = await _userManager.GetRolesAsync(user);
-            userDtos.Add(MapToUserDto(user, roles));
+            // userDtos.Add(MapToUserDto(user, roles));
+            userDtos.Add(UserMapper.ToUserDto(user, roles));
+
         }
 
         return userDtos;
@@ -51,12 +54,14 @@ public class UserService : TenantAwareService, IUserService
     public async Task<UserDto> GetUserByIdAsync(string userId)
     {
         await AuthorizeSameTenantAsync();
-        
+
         var user = await _userManager.FindByIdAsync(userId);
         if (user == null) throw new InvalidOperationException($"User with ID '{userId}' not found.");
 
         var roles = await _userManager.GetRolesAsync(user);
-        return MapToUserDto(user, roles);
+        // return MapToUserDto(user, roles);
+        return UserMapper.ToUserDto(user, roles);
+
     }
 
     public async Task<UserDto> UpdateUserAsync(string userId, UpdateUserDto dto)
@@ -66,8 +71,16 @@ public class UserService : TenantAwareService, IUserService
         if (dto == null) throw new ArgumentNullException(nameof(dto));
 
         var user = await _userManager.FindByIdAsync(userId);
-        if (user == null)
-            throw new InvalidOperationException($"User with ID '{userId}' not found.");
+
+        // if (user == null)
+        //     throw new InvalidOperationException($"User with ID '{userId}' not found.");
+
+        // // Prevent cross-tenant manipulation
+        // if (user.TenantId != GetCurrentTenantId())
+        //     throw new UnauthorizedAccessException("User with the given ID was not found in your tenant.");
+
+        if (user == null || user.TenantId != GetCurrentTenantId())
+            throw new InvalidOperationException("User with the given ID was not found in your tenant.");
 
         // Validate roles
         var validRoles = new[] {
@@ -93,7 +106,9 @@ public class UserService : TenantAwareService, IUserService
         if (!addResult.Succeeded)
             throw new InvalidOperationException($"Failed to assign role '{dto.Role}' to user '{userId}'.");
 
-        return MapToUserDto(user, new List<string> { dto.Role });
+        // return MapToUserDto(user, new List<string> { dto.Role });
+        return UserMapper.ToUserDto(user, new List<string> { dto.Role });
+
     }
 
     public async Task<bool> DeleteUserAsync(string userId)
@@ -101,24 +116,32 @@ public class UserService : TenantAwareService, IUserService
         await AuthorizeSameTenantAsync();
 
         var user = await _userManager.FindByIdAsync(userId);
-        if (user == null) return false;
+        // if (user == null) return false;
+
+        // Prevent cross-tenant manipulation
+        if (user == null || user.TenantId != GetCurrentTenantId())
+            throw new InvalidOperationException("User with the given ID was not found in your tenant.");
 
         var deleteResult = await _userManager.DeleteAsync(user);
         return deleteResult.Succeeded;
     }
 
-    // Helper method to map ApplicationUser + roles to UserDto
-    private UserDto MapToUserDto(ApplicationUser user, IList<string> roles)
-    {
-        var userNameFromEmail = user.Email?.Split('@')[0] ?? string.Empty;
-        return new UserDto
-        {
-            Id = user.Id,
-            UserName = userNameFromEmail,
-            Email = user.Email ?? string.Empty,
-            Roles = roles.ToList(),
-            TenantId = user.TenantId ?? Guid.Empty
-        };
-    }
+    // // Helper method to map ApplicationUser + roles to UserDto
+    // private UserDto MapToUserDto(ApplicationUser user, IList<string> roles)
+    // {
+    //     var userNameFromEmail = user.Email?.Split('@')[0] ?? string.Empty;
+    //     return new UserDto
+    //     {
+    //         Id = user.Id,
+    //         UserName = userNameFromEmail,
+    //         Email = user.Email ?? string.Empty,
+    //         Roles = roles.ToList(),
+    //         TenantId = user.TenantId ?? Guid.Empty,
+    //         // soft delete properties
+    //         IsDeleted = user.IsDeleted,
+    //         DeletedAt = user.DeletedAt,
+    //         DeletedBy = user.DeletedBy
+    //     };
+    // }
 
 }
