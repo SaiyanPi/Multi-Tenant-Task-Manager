@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Identity;
@@ -7,21 +8,30 @@ using MultiTenantTaskManager.Accessor;
 using MultiTenantTaskManager.Authentication;
 using MultiTenantTaskManager.DTOs.User;
 using MultiTenantTaskManager.Mappers;
+using MultiTenantTaskManager.Models;
 
 namespace MultiTenantTaskManager.Services;
 
 public class UserService : TenantAwareService, IUserService
 {
     private readonly UserManager<ApplicationUser> _userManager;
+        private readonly IAuditService _auditService;
+        private readonly IUserAccessor _userAccessor;
+
+
 
     public UserService(
         UserManager<ApplicationUser> userManager,
+        IAuditService auditService,
+        IUserAccessor userAccessor,
         ClaimsPrincipal user,
         ITenantAccessor tenantAccessor,
         IAuthorizationService authorizationService
        ) : base(user, tenantAccessor, authorizationService)
     {
         _userManager = userManager ?? throw new ArgumentNullException(nameof(userManager));
+        _auditService = auditService ?? throw new ArgumentNullException(nameof(auditService));
+        _userAccessor = userAccessor ?? throw new ArgumentNullException(nameof(userAccessor));
     }
 
     public async Task<IEnumerable<UserDto>> GetAllUsersForTenantAsync(int page = 1, int pageSize = 10)
@@ -55,7 +65,11 @@ public class UserService : TenantAwareService, IUserService
     {
         await AuthorizeSameTenantAsync();
 
-        var user = await _userManager.FindByIdAsync(userId);
+        var tenantId = GetCurrentTenantId();
+
+        var user = await _userManager.Users
+            .FirstOrDefaultAsync(u => u.Id == userId && u.TenantId == tenantId);
+
         if (user == null) throw new InvalidOperationException($"User with ID '{userId}' not found.");
 
         var roles = await _userManager.GetRolesAsync(user);
@@ -68,20 +82,26 @@ public class UserService : TenantAwareService, IUserService
     {
         await AuthorizeSameTenantAsync();
 
+        var tenantId = GetCurrentTenantId();
+
+
         if (dto == null) throw new ArgumentNullException(nameof(dto));
 
-        var user = await _userManager.FindByIdAsync(userId);
+        var user = await _userManager.Users
+            .FirstOrDefaultAsync(u => u.Id == userId && u.TenantId == tenantId);
+        if (user == null)
+            throw new InvalidOperationException("User with the given ID was not found.");
 
-        // if (user == null)
-        //     throw new InvalidOperationException($"User with ID '{userId}' not found.");
+        // original user DTO snapshot before update
+        var originalUserDto = UserMapper.ToUserDto(user, await _userManager.GetRolesAsync(user));
 
-        // // Prevent cross-tenant manipulation
-        // if (user.TenantId != GetCurrentTenantId())
-        //     throw new UnauthorizedAccessException("User with the given ID was not found in your tenant.");
+        // Now retrieve it again for tracking changes
+        var trackedUser = await _userManager.Users
+            .FirstOrDefaultAsync(u => u.Id == userId && u.TenantId == tenantId);
+        if (trackedUser == null)
+            throw new InvalidOperationException($"User with ID '{userId}' not found for update.");
 
-        if (user == null || user.TenantId != GetCurrentTenantId())
-            throw new InvalidOperationException("User with the given ID was not found in your tenant.");
-
+        
         // Validate roles
         var validRoles = new[] {
             AppRoles.SuperAdmin,
@@ -96,15 +116,31 @@ public class UserService : TenantAwareService, IUserService
             throw new InvalidOperationException($"Invalid role '{dto.Role}'. Allowed roles are: {string.Join(", ", validRoles)}");
 
         // Remove all existing roles
-        var currentRoles = await _userManager.GetRolesAsync(user);
-        var removeResult = await _userManager.RemoveFromRolesAsync(user, currentRoles);
+        var currentRoles = await _userManager.GetRolesAsync(trackedUser);
+        var removeResult = await _userManager.RemoveFromRolesAsync(trackedUser, currentRoles);
         if (!removeResult.Succeeded)
             throw new InvalidOperationException($"Failed to remove existing roles from user '{userId}'.");
 
         // Add the new role
-        var addResult = await _userManager.AddToRoleAsync(user, dto.Role);
+        var addResult = await _userManager.AddToRoleAsync(trackedUser, dto.Role);
         if (!addResult.Succeeded)
             throw new InvalidOperationException($"Failed to assign role '{dto.Role}' to user '{userId}'.");
+
+        // User DTO after update
+        var updatedUserDto = UserMapper.ToUserDto(trackedUser, new List<string> { dto.Role });
+
+        // Log both old and new state
+        var auditData = new
+        {
+            Original = originalUserDto,
+            Updated = updatedUserDto
+        };
+        await _auditService.LogAsync(
+            action: "Update",
+            entityName: "ApplicationUser",
+            entityId: user.Id.ToString(),
+            changes: JsonSerializer.Serialize(auditData)
+        );
 
         // return MapToUserDto(user, new List<string> { dto.Role });
         return UserMapper.ToUserDto(user, new List<string> { dto.Role });
@@ -115,14 +151,27 @@ public class UserService : TenantAwareService, IUserService
     {
         await AuthorizeSameTenantAsync();
 
-        var user = await _userManager.FindByIdAsync(userId);
-        // if (user == null) return false;
+        var tenantId = GetCurrentTenantId();
 
-        // Prevent cross-tenant manipulation
-        if (user == null || user.TenantId != GetCurrentTenantId())
-            throw new InvalidOperationException("User with the given ID was not found in your tenant.");
+        var user = await _userManager.Users
+        .FirstOrDefaultAsync(u => u.Id == userId && u.TenantId == tenantId);
+
+        if (user == null)
+            throw new InvalidOperationException("User with the given ID was not found.");
+
+        // User DTO before deletion
+        var deletedUserDto = UserMapper.ToUserDto(user, await _userManager.GetRolesAsync(user));
 
         var deleteResult = await _userManager.DeleteAsync(user);
+
+        // audit Log the after deletion
+        await _auditService.LogAsync(
+            action: "Delete",
+            entityName: "ApplicationUser",
+            entityId: user.Id.ToString(),
+            changes: JsonSerializer.Serialize(deletedUserDto)
+        );
+
         return deleteResult.Succeeded;
     }
 
