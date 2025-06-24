@@ -113,8 +113,14 @@ public class AccountController : ControllerBase
             }
 
             // Regular tenant-scoped user registration
-            
-             // Fallback to tenant accessor if TenantId is not provided in body
+
+            // if provided TenantId does not match with the header TenantId, return an error
+            if (model.TenantId != _tenantAccessor.TenantId)
+            {
+                return BadRequest("TenantId in the request body does not match the current tenant context.");
+            }
+
+            // Fallback to tenant accessor if TenantId is not provided in body
             if (!model.TenantId.HasValue || model.TenantId == Guid.Empty)
             {
                 model.TenantId = _tenantAccessor.TenantId;
@@ -136,24 +142,42 @@ public class AccountController : ControllerBase
             {
                 return BadRequest("TenantId in the request body does not match the current tenant context.");
             }
-            
-            var existedUser = await _userManager.FindByNameAsync(model.Email);
 
-            if (existedUser != null)
-            {
-                ModelState.AddModelError("", "Email already exists!");
-                return BadRequest(ModelState);
-            }
+            // following code is commented because even if we maintain user uniqueness per tenant
+            // the default UserManager logic enforces uniqueness of UserName globally, regardless of the TenantId.
+            // user uniqueness is ensured from custom MultiTenantUserValidator.cs
+
+            // -------------------------------------------------------------------
+            //// unique user: this prevents duplicate user globally but we don't want user uniqueness globally but
+            //// rather per tenant because user from another tenant can have the same name hence possibly email
+            //// resulting in unable to register the user.
+
+            // var existedUser = await _userManager.FindByNameAsync(model.Email);
+
+            //// check if the user already exists in the current tenant not globally
+            // var existedUser = await _userManager.Users
+            //     .FirstOrDefaultAsync(u =>
+            //         u.Email == model.Email &&
+            //         u.TenantId == _tenantAccessor.TenantId);
+
+            // if (existedUser != null)
+            // {
+            //     ModelState.AddModelError("", "Email already exists!");
+            //     return BadRequest(ModelState);
+            // }
+            // ----------------------------------------------------------------------
+
             // Create a new user object
             var user = new ApplicationUser
             {
-                UserName = model.Email,
+                // UserName = model.Email,
+                UserName = $"{model.Email}_{model.TenantId}", // ensures UserName is unique globally, while still showing the same email to users.
                 Email = model.Email,
                 TenantId = model.TenantId,
                 SecurityStamp = Guid.NewGuid().ToString()
             };
             // Try to save the user
-            var userResult = await _userManager.CreateAsync(user, model.Password);
+            var userResult = await _userManager.CreateAsync(user, model.Password); // automatically applies UserValidator<TUser> which is currently replaced by MultiTenantUserValidator
             // Add the user to the role
             var roleResult = await _userManager.AddToRoleAsync(user, roleName);
 
@@ -202,9 +226,23 @@ public class AccountController : ControllerBase
                 return Ok("User registered successfully.");
             }
 
-            foreach (var error in userResult.Errors)
+            // foreach (var error in userResult.Errors)
+            // {
+            //     ModelState.AddModelError("", error.Description);
+            // }
+            
+            // Ignoring the validation error related to duplicate username when registering because we only
+            // want to show email/password related validation error
+            var filteredErrors = userResult.Errors
+                .Where(e => !e.Code.Contains("DuplicateUserName", StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            if (filteredErrors.Count > 0)
             {
-                ModelState.AddModelError("", error.Description);
+                foreach (var error in filteredErrors)
+                {
+                    ModelState.AddModelError("", error.Description);
+                }
             }
 
         }

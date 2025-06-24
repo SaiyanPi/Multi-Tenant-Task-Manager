@@ -11,6 +11,7 @@ using MultiTenantTaskManager.Authentication;
 using MultiTenantTaskManager.Data;
 using MultiTenantTaskManager.Middleware;
 using MultiTenantTaskManager.Services;
+using MultiTenantTaskManager.Validators;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -120,6 +121,8 @@ builder.Services.AddScoped<ITaskItemService, TaskItemService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IAuditService, AuditService>();
 builder.Services.AddScoped<IUserAccessor, UserAccessor>();
+builder.Services.AddScoped<IUserValidator<ApplicationUser>, MultiTenantUserValidator>();
+
 
 
 var app = builder.Build();

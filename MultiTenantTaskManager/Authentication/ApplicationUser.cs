@@ -4,7 +4,7 @@ using MultiTenantTaskManager.Services;
 
 namespace MultiTenantTaskManager.Authentication;
 
-public class ApplicationUser : IdentityUser
+public class ApplicationUser : IdentityUser, ISoftDeletable
 {
     // foreign key to the Tenant
     public Guid? TenantId { get; set; } //nullable because SuperAdmin user does not belong to any tenant
@@ -13,7 +13,7 @@ public class ApplicationUser : IdentityUser
     public Tenant? Tenant { get; set; }
 
 
-    // public bool IsDeleted { get; set; }     // for soft deletion
-    // public DateTime? DeletedAt { get; set; }    // for soft deletion
-    // public string? DeletedBy { get; set; }  // for soft deletion
+    public bool IsDeleted { get; set; }     // for soft deletion
+    public DateTime? DeletedAt { get; set; }    // for soft deletion
+    public string? DeletedBy { get; set; }  // for soft deletion
 }

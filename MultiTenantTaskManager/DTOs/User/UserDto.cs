@@ -8,7 +8,7 @@ public class UserDto
     public List<string> Roles { get; set; } = new List<string>();
 
     // soft delete
-    // public bool IsDeleted { get; set; }
-    // public DateTime? DeletedAt { get; set; }
-    // public string? DeletedBy { get; set; }
+    public bool IsDeleted { get; set; }
+    public DateTime? DeletedAt { get; set; }
+    public string? DeletedBy { get; set; }
 }

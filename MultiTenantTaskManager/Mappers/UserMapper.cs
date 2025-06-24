@@ -16,9 +16,9 @@ public static class UserMapper
             Email = user.Email ?? string.Empty,
             Roles = roles.ToList(),
             TenantId = user.TenantId ?? Guid.Empty,
-            // IsDeleted = user.IsDeleted,
-            // DeletedAt = user.DeletedAt,
-            // DeletedBy = user.DeletedBy
+            IsDeleted = user.IsDeleted,
+            DeletedAt = user.DeletedAt,
+            DeletedBy = user.DeletedBy
         };
     }
 }

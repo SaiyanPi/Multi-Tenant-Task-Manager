@@ -162,8 +162,13 @@ public class UserService : TenantAwareService, IUserService
         // User DTO before deletion
         var deletedUserDto = UserMapper.ToUserDto(user, await _userManager.GetRolesAsync(user));
 
-        var deleteResult = await _userManager.DeleteAsync(user);
+        // var deleteResult = await _userManager.DeleteAsync(user);
+        // Soft delete
+        user.IsDeleted = true;
+        user.DeletedAt = DateTime.UtcNow;
+        user.DeletedBy = _userAccessor.UserName ?? "Unknown";
 
+        
         // audit Log the after deletion
         await _auditService.LogAsync(
             action: "Delete",
@@ -172,7 +177,8 @@ public class UserService : TenantAwareService, IUserService
             changes: JsonSerializer.Serialize(deletedUserDto)
         );
 
-        return deleteResult.Succeeded;
+        // return deleteResult.Succeeded;
+        return true;
     }
 
     // // Helper method to map ApplicationUser + roles to UserDto
