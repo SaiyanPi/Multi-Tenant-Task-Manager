@@ -7,6 +7,8 @@ C:\Users\zlams\source\Multi Tenant\MultiTenantTaskManager\bin\Debug\net8.0\Multi
 C:\Users\zlams\source\Multi Tenant\MultiTenantTaskManager\bin\Debug\net8.0\MultiTenantTaskManager.pdb
 C:\Users\zlams\source\Multi Tenant\MultiTenantTaskManager\bin\Debug\net8.0\Azure.Core.dll
 C:\Users\zlams\source\Multi Tenant\MultiTenantTaskManager\bin\Debug\net8.0\Azure.Identity.dll
+C:\Users\zlams\source\Multi Tenant\MultiTenantTaskManager\bin\Debug\net8.0\FluentValidation.dll
+C:\Users\zlams\source\Multi Tenant\MultiTenantTaskManager\bin\Debug\net8.0\FluentValidation.DependencyInjectionExtensions.dll
 C:\Users\zlams\source\Multi Tenant\MultiTenantTaskManager\bin\Debug\net8.0\Humanizer.dll
 C:\Users\zlams\source\Multi Tenant\MultiTenantTaskManager\bin\Debug\net8.0\Microsoft.AspNetCore.Authentication.JwtBearer.dll
 C:\Users\zlams\source\Multi Tenant\MultiTenantTaskManager\bin\Debug\net8.0\Microsoft.AspNetCore.Cryptography.Internal.dll
@@ -51,6 +53,8 @@ C:\Users\zlams\source\Multi Tenant\MultiTenantTaskManager\bin\Debug\net8.0\Micro
 C:\Users\zlams\source\Multi Tenant\MultiTenantTaskManager\bin\Debug\net8.0\Microsoft.SqlServer.Server.dll
 C:\Users\zlams\source\Multi Tenant\MultiTenantTaskManager\bin\Debug\net8.0\Microsoft.Win32.SystemEvents.dll
 C:\Users\zlams\source\Multi Tenant\MultiTenantTaskManager\bin\Debug\net8.0\Mono.TextTemplating.dll
+C:\Users\zlams\source\Multi Tenant\MultiTenantTaskManager\bin\Debug\net8.0\SharpGrip.FluentValidation.AutoValidation.Mvc.dll
+C:\Users\zlams\source\Multi Tenant\MultiTenantTaskManager\bin\Debug\net8.0\SharpGrip.FluentValidation.AutoValidation.Shared.dll
 C:\Users\zlams\source\Multi Tenant\MultiTenantTaskManager\bin\Debug\net8.0\Swashbuckle.AspNetCore.Swagger.dll
 C:\Users\zlams\source\Multi Tenant\MultiTenantTaskManager\bin\Debug\net8.0\Swashbuckle.AspNetCore.SwaggerGen.dll
 C:\Users\zlams\source\Multi Tenant\MultiTenantTaskManager\bin\Debug\net8.0\Swashbuckle.AspNetCore.SwaggerUI.dll

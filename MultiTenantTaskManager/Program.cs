@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using System.Text;
 using System.Text.Json.Serialization;
+using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -12,6 +13,7 @@ using MultiTenantTaskManager.Data;
 using MultiTenantTaskManager.Middleware;
 using MultiTenantTaskManager.Services;
 using MultiTenantTaskManager.Validators;
+using SharpGrip.FluentValidation.AutoValidation.Mvc.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -123,6 +125,16 @@ builder.Services.AddScoped<IAuditService, AuditService>();
 builder.Services.AddScoped<IUserAccessor, UserAccessor>();
 builder.Services.AddScoped<IUserValidator<ApplicationUser>, MultiTenantUserValidator>();
 
+// Fluent validation = validation logic that is independent of business logic that is why we don't mention it inside service classes
+builder.Services
+    // .AddFluentValidationAutoValidation(); // Enables automatic model validation
+    // .AddFluentValidationClientsideAdapters(); // Enables client-side adapters (optional, useful for Razor or Blazor apps)
+    .AddFluentValidationAutoValidation(options =>
+    {
+        options.DisableBuiltInModelValidation = true; // Allows async rules
+    });
+// Register validators from the current assembly or specify explicitly
+builder.Services.AddValidatorsFromAssemblyContaining<CreateProjectDtoValidator>();
 
 
 var app = builder.Build();
