@@ -12,6 +12,7 @@ public class UpdateProjectDtoValidator : AbstractValidator<UpdateProjectDto>
     {
         RuleFor(p => p.Id)
             .Cascade(CascadeMode.Stop) // Stop validating if Id fails
+            .NotEmpty().WithMessage("Project Id is required.")
             .GreaterThan(0).WithMessage("Invalid project ID.");
 
         RuleFor(p => p.Name)

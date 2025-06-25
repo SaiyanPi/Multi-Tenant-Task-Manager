@@ -133,7 +133,7 @@ builder.Services
     {
         options.DisableBuiltInModelValidation = true; // Allows async rules
     });
-// Register validators from the current assembly or specify explicitly
+// Register all validators from the current assembly or specify explicitly
 builder.Services.AddValidatorsFromAssemblyContaining<CreateProjectDtoValidator>();
 
 

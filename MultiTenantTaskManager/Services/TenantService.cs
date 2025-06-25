@@ -50,7 +50,8 @@ public class TenantService : ITenantService
         if(dto == null) throw new ArgumentNullException(nameof(dto));
 
         var tenantExists = await _context.Tenants
-            .AnyAsync(t => t.Name == dto.Name || t.Domain == dto.Domain);
+            // .AnyAsync(t => t.Name == dto.Name || t.Domain == dto.Domain);
+            .AnyAsync(t => t.Name == dto.Name);
         if (tenantExists)
         {
             throw new InvalidOperationException($"Tenant with name '{dto.Name}' or domain '{dto.Domain}' already exists.");
