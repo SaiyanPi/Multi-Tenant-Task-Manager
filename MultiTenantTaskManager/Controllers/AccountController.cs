@@ -72,7 +72,7 @@ public class AccountController : ControllerBase
             // special handling for super admin outside tenant scope (to set tenantId null)
             if (roleName == AppRoles.SuperAdmin)
             {
-                var existedSuperAdmin = await _userManager.FindByNameAsync(model.Email);
+                var existedSuperAdmin = await _userManager.FindByEmailAsync(model.Email);
                 if (existedSuperAdmin != null)
                 {
                     ModelState.AddModelError("", "Email already exists!");
