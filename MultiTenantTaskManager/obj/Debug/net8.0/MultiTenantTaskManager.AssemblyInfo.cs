@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("MultiTenantTaskManager")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+caec5d577d4e88d3f7195957836a9d29726ef171")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+ff776794a866425503c2f31d425013c0da46d42d")]
 [assembly: System.Reflection.AssemblyProductAttribute("MultiTenantTaskManager")]
 [assembly: System.Reflection.AssemblyTitleAttribute("MultiTenantTaskManager")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

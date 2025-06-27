@@ -19,25 +19,21 @@ public class RegisterDtoValidator : AbstractValidator<RegisterDto>
             .MustAsync(async (dto, email, cancellation) =>
             {
                 var tenantId = tenantAccessor.TenantId;
+
                 // SuperAdmin is global, check globally
+
+                // -> Returns true if no user with the email exists (i.e., the email is available for use),
+                // -> Returns false if a user already exists with that email.
                 if (dto.Role == "SuperAdmin")
                 {
-                    var existing = await userManager.FindByEmailAsync(email);
-                    return existing == null;
+                    var existing = await userManager.Users.Where(u => u.Email == email && u.TenantId == null)
+                    .SingleOrDefaultAsync(cancellation);
+                    return existing == null; // returns false if email exist
                 }
 
                 // For tenant users, check if email exists within the same tenant
-                // if provided TenantId does not match with the header TenantId, return an error
-                if (!dto.TenantId.HasValue || dto.TenantId == Guid.Empty)
-                {
-                    dto.TenantId = tenantAccessor.TenantId;
-                }
-                // Fallback to tenant accessor if TenantId is not provided in body
-                if (!dto.TenantId.HasValue || dto.TenantId == Guid.Empty)
-                {
-                    dto.TenantId = tenantAccessor.TenantId;
-                }
-
+                // If a user exists → AnyAsync returns true | !true → false
+                // If no user is found → AnyAsync returns false | !false → true
                 return !await userManager.Users
                     .Where(u => u.Email == email && u.TenantId == tenantId)
                     .AnyAsync(cancellation);
@@ -49,14 +45,14 @@ public class RegisterDtoValidator : AbstractValidator<RegisterDto>
             .MinimumLength(6).WithMessage("Password must be at least 6 characters long.");
 
         RuleFor(u => u.TenantId)
-            .NotEmpty().WithMessage("Tenant ID is required.")
             .MustAsync(async (tenantId, cancellation) =>
             {
                 if (!tenantId.HasValue || tenantId == Guid.Empty)
-                    return false;
+                    return true; // Let controller handle required check
 
                 return await dbContext.Tenants.AnyAsync(t => t.Id == tenantId.Value, cancellation);
-            }).WithMessage("Tenant with the given ID does not exist.")
+
+            }).WithMessage("Tenant does not exist.")
             .When(u => u.Role is not null and not "SuperAdmin"); // Skip this check for SuperAdmin
     }
 }

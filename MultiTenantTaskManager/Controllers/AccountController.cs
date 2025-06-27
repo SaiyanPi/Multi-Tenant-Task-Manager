@@ -112,25 +112,23 @@ public class AccountController : ControllerBase
 
             }
 
-            // Regular tenant-scoped user registration
+            // Regular tenant-scoped user registration -----
 
-            // if provided TenantId does not match with the header TenantId, return an error
-            if (model.TenantId != _tenantAccessor.TenantId)
+            var tenantId = _tenantAccessor.TenantId;
+            var requestBodyTenantId = model.TenantId;
+
+            // if tenantId is not provided in request body and the tenantId from tenant accessor has empty value
+            if (!requestBodyTenantId.HasValue && tenantId == Guid.Empty)
             {
-                return BadRequest("TenantId in the request body does not match the current tenant context.");
+                throw new InvalidOperationException("Tenant ID is required. Provide it in request header or body.");
             }
 
-            // Fallback to tenant accessor if TenantId is not provided in body
-            if (!model.TenantId.HasValue || model.TenantId == Guid.Empty)
-            {
-                model.TenantId = _tenantAccessor.TenantId;
-            }
+            // Check for mismatch if both are provided
+            if (requestBodyTenantId.HasValue && tenantId != Guid.Empty && requestBodyTenantId.Value != tenantId)
+                throw new InvalidOperationException("Tenant ID in request body does not match the tenant context in header.");
 
-            // If still missing, return an error
-            if (!model.TenantId.HasValue || model.TenantId == Guid.Empty)
-            {
-                return BadRequest("TenantId is required either in the request body or header.");
-            }
+            // Set final TenantId: prefer body if present, otherwise use header
+            model.TenantId ??= tenantId;
 
             var tenantExists = await _dbContext.Tenants.AnyAsync(t => t.Id == model.TenantId);
             if (!tenantExists)
@@ -138,10 +136,6 @@ public class AccountController : ControllerBase
                 return BadRequest("Tenant does not exist.");
             }
 
-            if (model.TenantId != _tenantAccessor.TenantId)
-            {
-                return BadRequest("TenantId in the request body does not match the current tenant context.");
-            }
 
             // following code is commented because even if we maintain user uniqueness per tenant
             // the default UserManager logic enforces uniqueness of UserName globally, regardless of the TenantId.
@@ -256,32 +250,58 @@ public class AccountController : ControllerBase
         if (!ModelState.IsValid)
             return BadRequest(new { message = "Invalid request data.", errors = ModelState });
         
-        var user = await _userManager.FindByEmailAsync(model.Email);
-        if (user == null)
-            return Unauthorized(new { message = "Invalid email or password." });
+        // First, try to find user by email (without tenant filter)
+        var userByEmail = await _userManager.Users
+            .Where(u => u.Email == model.Email)
+            .ToListAsync();
 
-        var isPasswordValid = await _userManager.CheckPasswordAsync(user, model.Password);
-        if (!isPasswordValid)
-            return Unauthorized(new { message = "Invalid email or password." });
-        
-        var userRoles = await _userManager.GetRolesAsync(user);
-        // If user is SuperAdmin, skip tenant checks
-        if (!userRoles.Contains(AppRoles.SuperAdmin))
+         // If no user found at all
+        if (userByEmail.Count == 0)
+            return Unauthorized(new { message = "Email not registered." });
+
+        // Try to find if any user with this email is SuperAdmin
+        var superAdminUser = userByEmail.FirstOrDefault(u => 
+            _userManager.GetRolesAsync(u).Result.Contains(AppRoles.SuperAdmin));
+
+        if (superAdminUser != null)
         {
-            // Read tenant ID from header
-            var headerTenantId = HttpContext.Request.Headers["X-Tenant-ID"].ToString();
-            if (string.IsNullOrWhiteSpace(headerTenantId))
-                return BadRequest(new { message = "Tenant ID is required in the 'X-Tenant-ID' header." });
+            // We found a SuperAdmin user, so login that user (only one superadmin per email should exist)
+            var isPasswordValid = await _userManager.CheckPasswordAsync(superAdminUser, model.Password);
+            if (!isPasswordValid)
+                return Unauthorized(new { message = "Invalid email or password." });
 
-            // Validate tenant match
-            var userTenantId = user.TenantId.ToString();
-            if (!string.Equals(userTenantId, headerTenantId, StringComparison.OrdinalIgnoreCase))
-                return Forbid("Tenant mismatch: You are not authorized to log in to this tenant.");
-
+            var token = GenerateJwtToken(superAdminUser);
+            return Ok(new { token });
         }
 
-        var token = GenerateJwtToken(user);
-        return Ok(new { token });
+        // Not a SuperAdmin, get tenant from header
+        Guid currentTenantId;
+        try
+        {
+            currentTenantId = _tenantAccessor.TenantId;
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+
+        // Now find user in this tenant
+        var user = userByEmail.FirstOrDefault(u => u.TenantId == currentTenantId);
+
+        if (user == null)
+            return Unauthorized(new { message = "Tenant mismatch: Check your tenant and email " });
+
+        var isPasswordValidRegular = await _userManager.CheckPasswordAsync(user, model.Password);
+        if (!isPasswordValidRegular)
+            return Unauthorized(new { message = "Invalid email or password." });
+
+        var userRoles = await _userManager.GetRolesAsync(user);
+        if (!userRoles.Contains(AppRoles.SuperAdmin) && user.TenantId != currentTenantId)
+            return Forbid("Tenant mismatch: You are not authorized to log in to this tenant.");
+
+        var tokenRegular = GenerateJwtToken(user);
+        return Ok(new { token = tokenRegular });
+       
     }
 
     private async Task<string?> GenerateJwtToken(ApplicationUser user)

@@ -120,7 +120,16 @@ public class TenantResolutionMiddleware(RequestDelegate next)
             
             if (loginData?.Email != null)
             {
-                var user = await userManager.FindByEmailAsync(loginData.Email);
+                // var user = await userManager.FindByEmailAsync(loginData.Email);
+
+                // The default ASP.NET Identity UserManager assumes emails are globally unique. But this is
+                // a multi-tenant app therefore, multiple users with the same email but different.
+                // Instead, we need to query the users filtered by email AND tenant ID.
+
+                var user = await userManager.Users
+                    .Where(u => u.Email == loginData.Email && u.TenantId == null)
+                    .SingleOrDefaultAsync();
+
                 if (user != null)
                 {
                     var roles = await userManager.GetRolesAsync(user);
