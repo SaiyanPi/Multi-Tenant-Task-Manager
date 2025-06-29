@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Text.Json;
+using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Identity;
@@ -16,7 +17,8 @@ public class UserService : TenantAwareService, IUserService
 {
     private readonly UserManager<ApplicationUser> _userManager;
         private readonly IAuditService _auditService;
-        private readonly IUserAccessor _userAccessor;
+        private readonly IUserAccessor _userAccessor; // inject UpdateUserDtoValidator because it does not have a controller action
+    private readonly IValidator<UpdateUserDto> _updateUserDtoValidator;
 
 
 
@@ -26,12 +28,14 @@ public class UserService : TenantAwareService, IUserService
         IUserAccessor userAccessor,
         ClaimsPrincipal user,
         ITenantAccessor tenantAccessor,
-        IAuthorizationService authorizationService
+        IAuthorizationService authorizationService,
+        IValidator<UpdateUserDto> updateUserDtoValidator
        ) : base(user, tenantAccessor, authorizationService)
     {
         _userManager = userManager ?? throw new ArgumentNullException(nameof(userManager));
         _auditService = auditService ?? throw new ArgumentNullException(nameof(auditService));
         _userAccessor = userAccessor ?? throw new ArgumentNullException(nameof(userAccessor));
+        _updateUserDtoValidator = updateUserDtoValidator;
     }
 
     public async Task<IEnumerable<UserDto>> GetAllUsersForTenantAsync(int page = 1, int pageSize = 10)
@@ -87,6 +91,10 @@ public class UserService : TenantAwareService, IUserService
 
         if (dto == null) throw new ArgumentNullException(nameof(dto));
 
+        var result = await _updateUserDtoValidator.ValidateAsync(dto); // calling the UpdateUserDtoValidator
+        if (!result.IsValid)
+        throw new ValidationException(result.Errors);
+
         var user = await _userManager.Users
             .FirstOrDefaultAsync(u => u.Id == userId && u.TenantId == tenantId);
         if (user == null)
@@ -101,19 +109,19 @@ public class UserService : TenantAwareService, IUserService
         if (trackedUser == null)
             throw new InvalidOperationException($"User with ID '{userId}' not found for update.");
 
-        
-        // Validate roles
-        var validRoles = new[] {
-            AppRoles.SuperAdmin,
-            AppRoles.Admin,
-            AppRoles.Manager,
-            AppRoles.Member,
-            AppRoles.SpecialMember
-        };
+        // no use because of fluent validation(UpdateUserDtoValidator)
+        // // Validate roles
+        // var validRoles = new[] {
+        //     AppRoles.SuperAdmin,
+        //     AppRoles.Admin,
+        //     AppRoles.Manager,
+        //     AppRoles.Member,
+        //     AppRoles.SpecialMember
+        // };
 
-        // Validate the provided role
-        if (!validRoles.Contains(dto.Role))
-            throw new InvalidOperationException($"Invalid role '{dto.Role}'. Allowed roles are: {string.Join(", ", validRoles)}");
+        // // Validate the provided role
+        // if (!validRoles.Contains(dto.Role))
+        //     throw new InvalidOperationException($"Invalid role '{dto.Role}'. Allowed roles are: {string.Join(", ", validRoles)}");
 
         // Remove all existing roles
         var currentRoles = await _userManager.GetRolesAsync(trackedUser);

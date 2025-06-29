@@ -46,3 +46,9 @@ public class CreateProjectDtoValidator : AbstractValidator<CreateProjectDto>
 // WHY?
 // It is because FluentValidation works at the property level, not at the DTO level. But still we can use
 // dto inside fluent (check out the project update validator)
+
+
+// NOTE: FLUENT VALIDATION does not run automatically in service methods we have to inject it.
+// for example in the context of updating the user:
+//  - it does not have a controller action unlike updating project,.. which have a controller action. so we have
+//      to inject the UpdateUserDtoValidator in the User service class.

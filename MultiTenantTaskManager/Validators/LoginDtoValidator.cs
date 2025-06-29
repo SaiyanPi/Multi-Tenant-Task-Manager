@@ -5,6 +5,7 @@ using MultiTenantTaskManager.Authentication;
 using MultiTenantTaskManager.Authentication.DTOs;
 using MultiTenantTaskManager.Data;
 using Microsoft.EntityFrameworkCore;
+using System.ComponentModel.DataAnnotations;
 
 namespace MultiTenantTaskManager.Validators;
 public class LoginDtoValidator : AbstractValidator<LoginDto>
@@ -13,6 +14,7 @@ public class LoginDtoValidator : AbstractValidator<LoginDto>
         ITenantAccessor tenantAccessor)
     {
         RuleFor(u => u.Email)
+            .Cascade(CascadeMode.Stop)
             .NotEmpty().WithMessage("Email is required.")
             .EmailAddress().WithMessage("A valid email is required.")
             .MustAsync(async (email, cancellation) =>
@@ -20,7 +22,7 @@ public class LoginDtoValidator : AbstractValidator<LoginDto>
                 // var user = await userManager.FindByEmailAsync(email);
 
                 // The default ASP.NET Identity UserManager assumes emails are globally unique. But this is
-                // a multi-tenant app therefore, multiple users with the same email but different t
+                // a multi-tenant app therefore, multiple users with the same email but different tenantId
                 // Instead, we need to query the users filtered by email AND tenant ID.
 
                 var userByEmail = await userManager.Users
@@ -38,6 +40,7 @@ public class LoginDtoValidator : AbstractValidator<LoginDto>
 
         RuleFor(u => u.Password)
             .NotEmpty().WithMessage("Password is required.")
-            .MinimumLength(6).WithMessage("Password must be at least 6 characters long.");
+            .MinimumLength(6).WithMessage("Password must be at least 6 characters long.")
+            .When(x => !string.IsNullOrWhiteSpace(x.Email) && new EmailAddressAttribute().IsValid(x.Email));
     }
 }
