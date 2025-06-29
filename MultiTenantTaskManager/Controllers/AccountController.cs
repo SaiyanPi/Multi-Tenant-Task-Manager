@@ -161,11 +161,12 @@ public class AccountController : ControllerBase
             // }
             // ----------------------------------------------------------------------
 
+            var normalizedEmail = model.Email.Trim().ToLowerInvariant();
             // Create a new user object
             var user = new ApplicationUser
             {
                 // UserName = model.Email,
-                UserName = $"{model.Email}_{model.TenantId}", // ensures UserName is unique globally, while still showing the same email to users.
+                UserName = $"{normalizedEmail}_{model.TenantId}", // ensures UserName is unique globally, while still showing the same email to users.
                 Email = model.Email,
                 TenantId = model.TenantId,
                 SecurityStamp = Guid.NewGuid().ToString()

@@ -1,3 +1,4 @@
+using MultiTenantTaskManager.Authentication;
 using MultiTenantTaskManager.DTOs.Project;
 using MultiTenantTaskManager.DTOs.Tenant;
 
@@ -21,6 +22,9 @@ public class TaskItemDto
     // Reference navigation property to Tenant
     // public TenantDto? Tenant { get; set; } = null!;
     
+    // task assign to user
+    public string? AssignedUserId { get; set; }
+    public string? AssignedUserEmail { get; set; } //optional
 
     // soft delete
     public bool IsDeleted { get; set; }

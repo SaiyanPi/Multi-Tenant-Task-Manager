@@ -13,10 +13,14 @@ public static class TaskItemMapper
             Titles = entity.Titles,
             ProjectId = entity.ProjectId,
             TenantId = entity.TenantId,
+
+             // New assignment-related fields
+            AssignedUserId = entity.AssignedUserId,
+            AssignedUserEmail = entity.AssignedUser?.Email,
+
             // soft delete properties
             IsDeleted = entity.IsDeleted,
-            DeletedAt = entity.DeletedAt,
-            DeletedBy = entity.DeletedBy
+            DeletedAt = entity.DeletedAt
             
         };
     }

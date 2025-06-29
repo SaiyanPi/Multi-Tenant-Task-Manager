@@ -7,12 +7,12 @@ public static class UserMapper
 {
     public static UserDto ToUserDto(ApplicationUser user, IList<string> roles)
     {
-        var userNameFromEmail = user.Email?.Split('@')[0] ?? string.Empty;
+        // var userNameFromEmail = user.Email?.Split('@')[0] ?? string.Empty;
 
         return new UserDto
         {
             Id = user.Id,
-            UserName = userNameFromEmail,
+            UserName = user.UserName ?? string.Empty,
             Email = user.Email ?? string.Empty,
             Roles = roles.ToList(),
             TenantId = user.TenantId ?? Guid.Empty,

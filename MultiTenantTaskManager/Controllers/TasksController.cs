@@ -70,7 +70,7 @@ public class TasksController : ControllerBase
     {
         if (!ModelState.IsValid) return BadRequest(ModelState);
 
-        if(id != dto.Id) return BadRequest("Task ID in the URL does not match the ID in the body.");
+        if (id != dto.Id) return BadRequest("Task ID in the URL does not match the ID in the body.");
 
         try
         {
@@ -91,5 +91,15 @@ public class TasksController : ControllerBase
         var deleted = await _taskService.DeleteTaskAsync(id);
         if (!deleted) return NotFound($"Task with ID {id} not found.");
         return NoContent();
+    }
+
+    // POST: /api/tasks/assign
+    [Authorize(Policy = "canManageTasks")]
+    [HttpPost("assign")]
+    public async Task<ActionResult<TaskItemDto>> AssignUser([FromBody] AssignTaskDto dto)
+    {
+        Console.WriteLine("assign endpoint is hitting");
+        var updatedTask = await _taskService.AssignTaskAsync(dto);
+        return Ok(updatedTask);
     }
 }

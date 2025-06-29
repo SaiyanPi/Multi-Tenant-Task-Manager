@@ -2,8 +2,10 @@ using System.Security.Claims;
 using System.Text.Json;
 using Azure;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using MultiTenantTaskManager.Accessor;
+using MultiTenantTaskManager.Authentication;
 using MultiTenantTaskManager.Data;
 using MultiTenantTaskManager.DTOs.TaskItem;
 using MultiTenantTaskManager.Mappers;
@@ -16,6 +18,7 @@ public class TaskItemService : TenantAwareService, ITaskItemService
     private readonly ApplicationDbContext _context;
     private readonly IAuditService _auditService;
     private readonly IUserAccessor _userAccessor;
+    private readonly UserManager<ApplicationUser> _userManager;
 
     public TaskItemService(
         ApplicationDbContext context,
@@ -23,12 +26,14 @@ public class TaskItemService : TenantAwareService, ITaskItemService
         ITenantAccessor tenantAccessor,
         IAuthorizationService authorizationService,
         IAuditService auditService,
-        IUserAccessor userAccessor)
+        IUserAccessor userAccessor,
+        UserManager<ApplicationUser> userManager)
         : base(user, tenantAccessor, authorizationService)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
         _auditService = auditService ?? throw new ArgumentNullException(nameof(auditService));
         _userAccessor = userAccessor ?? throw new ArgumentNullException(nameof(userAccessor));
+        _userManager = userManager;
     }
 
     public async Task<IEnumerable<TaskItemDto>> GetAllTaskAsync(int page = 1, int pageSize = 10)
@@ -40,10 +45,12 @@ public class TaskItemService : TenantAwareService, ITaskItemService
         var tasks = await _context.TaskItems
             .AsNoTracking()
             .Where(t => t.TenantId == tenantId)
+            .Include(t => t.AssignedUser)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync();
 
+        // return tasks.Select(TaskItemMapper.ToTaskItemDto);
         return tasks.Select(TaskItemMapper.ToTaskItemDto);
     }
 
@@ -58,6 +65,7 @@ public class TaskItemService : TenantAwareService, ITaskItemService
             .FirstOrDefaultAsync(t => t.Id == taskId && t.TenantId == tenantId);
 
         return task == null ? null : TaskItemMapper.ToTaskItemDto(task);
+        // return task == null ? null : task.ToTaskItemDto();
     }
 
 
@@ -75,7 +83,7 @@ public class TaskItemService : TenantAwareService, ITaskItemService
         {
             throw new InvalidOperationException($"A task with title '{dto.Titles}' already exists.");
         }
-        
+
         var existingProject = await _context.Projects
             .FirstOrDefaultAsync(p => p.Id == dto.ProjectId && p.TenantId == tenantId);
 
@@ -105,6 +113,7 @@ public class TaskItemService : TenantAwareService, ITaskItemService
 
 
         return TaskItemMapper.ToTaskItemDto(taskItem);
+        // return taskItem.ToTaskItemDto();
     }
 
     public async Task<TaskItemDto> UpdateTaskAsync(int taskId, UpdateTaskItemDto dto)
@@ -154,6 +163,7 @@ public class TaskItemService : TenantAwareService, ITaskItemService
         );
 
         return TaskItemMapper.ToTaskItemDto(existingTask);
+        // return existingTask.ToTaskItemDto();
     }
 
     public async Task<bool> DeleteTaskAsync(int taskId)
@@ -166,7 +176,7 @@ public class TaskItemService : TenantAwareService, ITaskItemService
         var task = await _context.TaskItems
             .FirstOrDefaultAsync(t => t.Id == taskId && t.TenantId == tenantId);
         if (task == null) return false;
-        
+
         // task DTO before deletion
         var deletedTaskDto = TaskItemMapper.ToTaskItemDto(task);
 
@@ -187,6 +197,30 @@ public class TaskItemService : TenantAwareService, ITaskItemService
         );
 
         return true;
+    }
+
+    public async Task<TaskItemDto> AssignTaskAsync(AssignTaskDto dto)
+    {
+        var tenantId = _tenantAccessor.TenantId;
+
+        var task = await _context.TaskItems
+            .Include(t => t.AssignedUser)
+            .FirstOrDefaultAsync(t => t.Id == dto.TaskItemId && t.TenantId == tenantId && !t.IsDeleted);
+
+        if (task == null)
+            throw new KeyNotFoundException("Task not found.");
+
+        var user = await _userManager.FindByIdAsync(dto.AssignedUserId);
+        if (user == null || user.TenantId != tenantId)
+            throw new UnauthorizedAccessException("Invalid user for assignment.");
+
+        var userEmail = user.Email;
+
+        task.AssignedUserId = user.Id;
+        await _context.SaveChangesAsync();
+
+        return TaskItemMapper.ToTaskItemDto(task);
+        // return task.ToTaskItemDto();
     }
 
 }

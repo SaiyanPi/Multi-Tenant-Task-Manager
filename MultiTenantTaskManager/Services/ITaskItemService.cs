@@ -1,3 +1,4 @@
+using MultiTenantTaskManager.DTOs;
 using MultiTenantTaskManager.DTOs.TaskItem;
 using MultiTenantTaskManager.Models;
 
@@ -10,4 +11,6 @@ public interface ITaskItemService
     Task<TaskItemDto> CreateTaskAsync(CreateTaskItemDto dto);
     Task<TaskItemDto> UpdateTaskAsync(int taskId, UpdateTaskItemDto dto);
     Task<bool> DeleteTaskAsync(int taskId);
+
+    Task<TaskItemDto> AssignTaskAsync(AssignTaskDto dto);
 }

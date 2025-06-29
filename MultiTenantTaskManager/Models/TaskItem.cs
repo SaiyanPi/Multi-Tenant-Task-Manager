@@ -1,3 +1,4 @@
+using MultiTenantTaskManager.Authentication;
 using MultiTenantTaskManager.Services;
 
 namespace MultiTenantTaskManager.Models;
@@ -19,6 +20,11 @@ public class TaskItem : ISoftDeletable
     public Guid TenantId { get; set; }
     // Reference navigation property to Tenant
     public Tenant? Tenant { get; set; } = null!;
+
+
+    // task assign to user
+    public string? AssignedUserId { get; set; }  // Foreign key to Identity user
+    public ApplicationUser? AssignedUser { get; set; } // Navigation property
 
 
     public bool IsDeleted { get; set; }     // for soft deletion
