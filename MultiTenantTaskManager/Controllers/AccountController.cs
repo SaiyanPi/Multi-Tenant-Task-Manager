@@ -161,12 +161,26 @@ public class AccountController : ControllerBase
             // }
             // ----------------------------------------------------------------------
 
+            // if soft-deleted user exists then reuse soft-deleted user instead of creating
             var normalizedEmail = model.Email.Trim().ToLowerInvariant();
+            var userName = $"{normalizedEmail}_{tenantId}";
+
+            var existingUser = await _userManager.Users
+                .IgnoreQueryFilters() // to include soft-deleted users
+                .FirstOrDefaultAsync(u => u.UserName == userName && u.IsDeleted);
+
+            if (existingUser != null)
+            {
+                existingUser.IsDeleted = false;
+                await _userManager.UpdateAsync(existingUser);
+                return Ok("User registered successfully.");
+            }
+
             // Create a new user object
             var user = new ApplicationUser
             {
                 // UserName = model.Email,
-                UserName = $"{normalizedEmail}_{model.TenantId}", // ensures UserName is unique globally, while still showing the same email to users.
+                UserName = userName, // ensures UserName is unique globally, while still showing the same email to users.
                 Email = model.Email,
                 TenantId = model.TenantId,
                 SecurityStamp = Guid.NewGuid().ToString()
