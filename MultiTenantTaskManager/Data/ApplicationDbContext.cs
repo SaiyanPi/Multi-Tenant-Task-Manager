@@ -53,7 +53,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             .OnDelete(DeleteBehavior.Restrict); // this prevents cascading deletes from Tenant to TaskItem
                                                 // directly because we already have cascade delete from Tenant->Project->TaskItem
 
-    // ----------------------------------------------------------------------------------------------------
+        // ----------------------------------------------------------------------------------------------------
 
         // Adding a global query filter for soft deletion
         // This ensures IsDeleted = false by default for all queries unless explicitly overridden
@@ -81,6 +81,24 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
                 // eg, builder.Entity<TaskItem>().HasQueryFilter(t => !t.IsDeleted) 
             }
         }
+    }
+    
+    // Override the SaveChangesAsync to automatically set the current date and time in the 'CreatedAt' properties
+    public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        var utcNow = DateTime.UtcNow;
+
+        foreach (var entry in ChangeTracker.Entries<TaskItem>())
+        {
+            if (entry.State == EntityState.Added)
+            {
+                entry.Entity.CreatedAt = utcNow;
+            }
+
+            // Optional: Handle UpdatedAt/CompletedAt if needed here
+        }
+
+        return await base.SaveChangesAsync(cancellationToken);
     }
 
 }

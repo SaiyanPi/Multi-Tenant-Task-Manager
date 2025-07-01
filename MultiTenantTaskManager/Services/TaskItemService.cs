@@ -8,8 +8,11 @@ using MultiTenantTaskManager.Accessor;
 using MultiTenantTaskManager.Authentication;
 using MultiTenantTaskManager.Data;
 using MultiTenantTaskManager.DTOs.TaskItem;
+using MultiTenantTaskManager.Enums;
+using MultiTenantTaskManager.Helpers;
 using MultiTenantTaskManager.Mappers;
 using MultiTenantTaskManager.Models;
+using MultiTenantTaskManager.Validators;
 
 namespace MultiTenantTaskManager.Services;
 
@@ -162,7 +165,7 @@ public class TaskItemService : TenantAwareService, ITaskItemService
             changes: JsonSerializer.Serialize(auditData)
         );
 
-        return TaskItemMapper.ToTaskItemDto(existingTask);
+        return TaskItemMapper.ToTaskItemDto(trackedTask);
         // return existingTask.ToTaskItemDto();
     }
 
@@ -217,10 +220,72 @@ public class TaskItemService : TenantAwareService, ITaskItemService
         var userEmail = user.Email;
 
         task.AssignedUserId = user.Id;
+        task.Status = TaskItemStatus.Assigned; // set the task status assigned once assigned a user
+
         await _context.SaveChangesAsync();
+
+        // auditlog
+        await _auditService.LogAsync(
+            action: "Assign user",
+            entityName: "TaskItem",
+            entityId: dto.TaskItemId.ToString(),
+            // following line is commented because taskItem is an EF Core entity — and it still includes
+            // navigation properties (like .Project → Tasks → Project...), which causes the serialization
+            // cycle. so we have to use DTOs for Logging too.
+            // changes: JsonSerializer.Serialize(taskItem),
+            changes: JsonSerializer.Serialize(TaskItemMapper.ToTaskItemDto(taskItem))
+        );
 
         return TaskItemMapper.ToTaskItemDto(task);
         // return task.ToTaskItemDto();
+    }
+
+    public async Task<bool> UpdateTaskStatusAsync(int taskId, UpdateTaskItemStatusDto dto)
+    {
+        var tenantId = _tenantAccessor.TenantId;
+        var userId = _userAccessor.UserId;
+
+
+        var task = await _context.TaskItems.FirstOrDefaultAsync(t => t.Id == taskId && t.TenantId == tenantId);
+        
+        if (task == null)
+            throw new Exception("Task not found.");
+
+        // for custom UpdateTaskItemStatusDtoValidator -------
+        var currentStatus = task.Status;
+        var validator = new UpdateTaskItemStatusDtoValidator();
+        var result = validator.ValidateWithContext(dto, currentStatus);
+
+        if (!result.IsValid)
+        {
+            throw new InvalidOperationException($"Invalid status update: {string.Join(", ", result.Errors.Select(e => e.ErrorMessage))}");
+        }
+        // --------
+
+        // since my NewStatus is a string type, Parse the new status from string to enum
+        if (!Enum.TryParse<TaskItemStatus>(dto.NewStatus, out var newStatus))
+            throw new InvalidOperationException($"Invalid status value: {dto.NewStatus}");
+
+        // validate status transition
+        if (!TaskStatusTransition.CanTransition(task.Status, newStatus))
+            throw new InvalidOperationException($"Cannot transition from {task.Status} to {newStatus}");
+
+        // // Allow only assigned user or manager to progress the task
+        // if (newStatus == TaskItemStatus.InProgress || newStatus == TaskItemStatus.Completed)
+        // {
+        // Set timestamps based on status
+        if (task.Status != newStatus)
+        {
+            if (newStatus == TaskItemStatus.InProgress)
+                task.StartedAt = DateTime.UtcNow;
+            else if (newStatus == TaskItemStatus.Completed)
+                task.CompletedAt = DateTime.UtcNow;
+        }
+
+        task.Status = newStatus;
+        await _context.SaveChangesAsync();
+        return true;
+    
     }
 
 }

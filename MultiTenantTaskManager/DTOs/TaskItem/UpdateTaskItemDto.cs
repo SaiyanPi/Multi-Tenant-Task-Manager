@@ -7,4 +7,5 @@ public class UpdateTaskItemDto
 
     // Foreign key to Project
     public int ProjectId { get; set; }
+    public DateTime? DueDate { get; set; }
 }

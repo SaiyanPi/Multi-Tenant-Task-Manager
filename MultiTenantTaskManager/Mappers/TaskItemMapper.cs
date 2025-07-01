@@ -14,14 +14,19 @@ public static class TaskItemMapper
             ProjectId = entity.ProjectId,
             TenantId = entity.TenantId,
 
-             // New assignment-related fields
+            // New assignment-related fields
             AssignedUserId = entity.AssignedUserId,
             AssignedUserEmail = entity.AssignedUser?.Email,
+            Status = entity.Status,
+            DueDate = entity.DueDate,
+            CreatedAt = entity.CreatedAt,
+            StartedAt = entity.StartedAt,
+            CompletedAt = entity.CompletedAt
 
             // soft delete properties
-            IsDeleted = entity.IsDeleted,
-            DeletedAt = entity.DeletedAt
-            
+            // IsDeleted = entity.IsDeleted,
+            // DeletedAt = entity.DeletedAt
+
         };
     }
 
@@ -32,7 +37,8 @@ public static class TaskItemMapper
         return new TaskItem
         {
             Titles = dto.Titles,
-            ProjectId = dto.ProjectId
+            ProjectId = dto.ProjectId,
+            DueDate = dto.DueDate
         };
     }
     public static void UpdateFromDto(this TaskItem task, UpdateTaskItemDto dto)
@@ -41,5 +47,6 @@ public static class TaskItemMapper
 
         task.Titles = dto.Titles;
         task.ProjectId = dto.ProjectId;
+        task.DueDate = dto.DueDate;
     }
 }

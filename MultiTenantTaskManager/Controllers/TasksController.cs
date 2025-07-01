@@ -93,6 +93,7 @@ public class TasksController : ControllerBase
         return NoContent();
     }
 
+    // assign a user to a task
     // POST: /api/tasks/assign
     [Authorize(Policy = "canManageTasks")]
     [HttpPost("assign")]
@@ -100,6 +101,36 @@ public class TasksController : ControllerBase
     {
         Console.WriteLine("assign endpoint is hitting");
         var updatedTask = await _taskService.AssignTaskAsync(dto);
+        
         return Ok(updatedTask);
     }
+
+    // update the task status
+    // PATCH: /api/tasks/1/status
+    [Authorize(Policy = "canManageTasks")]
+    [HttpPatch("{id}/status")]
+    public async Task<IActionResult> UpdateTaskStatus(int id, [FromBody] UpdateTaskItemStatusDto dto)
+    {
+        try
+        {
+            var result = await _taskService.UpdateTaskStatusAsync(id, dto);
+            if (result)
+                return NoContent();
+
+            return BadRequest("Failed to update status");
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Forbid(ex.Message);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            return NotFound(ex.Message);
+        }
+    }
+
 }
