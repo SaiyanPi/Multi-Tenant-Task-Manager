@@ -213,6 +213,9 @@ public class TaskItemService : TenantAwareService, ITaskItemService
         if (task == null)
             throw new KeyNotFoundException("Task not found.");
 
+        // for audit
+        var previousAssignedUserId = task.AssignedUserId;
+
         var user = await _userManager.FindByIdAsync(dto.AssignedUserId);
         if (user == null || user.TenantId != tenantId)
             throw new UnauthorizedAccessException("Invalid user for assignment.");
@@ -225,15 +228,19 @@ public class TaskItemService : TenantAwareService, ITaskItemService
         await _context.SaveChangesAsync();
 
         // auditlog
+        var auditData = new
+        {
+            // PreviousAssignedUser = task.AssignedUserId,
+            PreviousAssignedUser = previousAssignedUserId,
+            NewAssignedUser = user.Id,
+            NewAssignedUserEmail = user.Email
+        };
+
         await _auditService.LogAsync(
-            action: "Assign user",
+            action: "Assignuser",
             entityName: "TaskItem",
-            entityId: dto.TaskItemId.ToString(),
-            // following line is commented because taskItem is an EF Core entity — and it still includes
-            // navigation properties (like .Project → Tasks → Project...), which causes the serialization
-            // cycle. so we have to use DTOs for Logging too.
-            // changes: JsonSerializer.Serialize(taskItem),
-            changes: JsonSerializer.Serialize(TaskItemMapper.ToTaskItemDto(taskItem))
+            entityId: task.Id.ToString(),
+            changes: JsonSerializer.Serialize(auditData)
         );
 
         return TaskItemMapper.ToTaskItemDto(task);
@@ -250,6 +257,9 @@ public class TaskItemService : TenantAwareService, ITaskItemService
         
         if (task == null)
             throw new Exception("Task not found.");
+
+        // auditlog: original task status snapshot before PATCH  
+        var originalTaskStatusDto = task.Status;
 
         // for custom UpdateTaskItemStatusDtoValidator -------
         var currentStatus = task.Status;
@@ -272,7 +282,9 @@ public class TaskItemService : TenantAwareService, ITaskItemService
 
         // // Allow only assigned user or manager to progress the task
         // if (newStatus == TaskItemStatus.InProgress || newStatus == TaskItemStatus.Completed)
-        // {
+        // {}
+
+
         // Set timestamps based on status
         if (task.Status != newStatus)
         {
@@ -284,6 +296,23 @@ public class TaskItemService : TenantAwareService, ITaskItemService
 
         task.Status = newStatus;
         await _context.SaveChangesAsync();
+
+        // auditlog: refetch after patch
+        var updatedTask = await _context.TaskItems.FirstOrDefaultAsync(t => t.Id == taskId && t.TenantId == tenantId);
+        var updatedTaskStatusDto = updatedTask!.Status;
+
+        var auditData = new
+        {
+            Original = originalTaskStatusDto,
+            Updated = updatedTaskStatusDto
+        };
+
+        await _auditService.LogAsync(
+            action: "TaskItemStatusUpdate",
+            entityName: "TaskItem",
+            entityId: task.Id.ToString(),
+            changes: JsonSerializer.Serialize(auditData)
+        );
         return true;
     
     }
