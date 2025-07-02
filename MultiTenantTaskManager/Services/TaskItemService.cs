@@ -220,7 +220,12 @@ public class TaskItemService : TenantAwareService, ITaskItemService
         if (user == null || user.TenantId != tenantId)
             throw new UnauthorizedAccessException("Invalid user for assignment.");
 
-        var userEmail = user.Email;
+        // prevent other user except member and special member from getting assigned
+        var userRoles = await _userManager.GetRolesAsync(user);
+        if (!userRoles.Contains(AppRoles.Member) && !userRoles.Contains(AppRoles.SpecialMember))
+        {
+            throw new UnauthorizedAccessException("User is not allowed to be assigned to a task.");
+        }
 
         task.AssignedUserId = user.Id;
         task.Status = TaskItemStatus.Assigned; // set the task status assigned once assigned a user
@@ -235,9 +240,12 @@ public class TaskItemService : TenantAwareService, ITaskItemService
             NewAssignedUser = user.Id,
             NewAssignedUserEmail = user.Email
         };
+        
+        // differentiating Reassigned and AssignUser actions based on condition
+        string actionValue = previousAssignedUserId != null ? "Reassigned" : "AssignUser";
 
         await _auditService.LogAsync(
-            action: "Assignuser",
+            action: actionValue,
             entityName: "TaskItem",
             entityId: task.Id.ToString(),
             changes: JsonSerializer.Serialize(auditData)
@@ -257,6 +265,10 @@ public class TaskItemService : TenantAwareService, ITaskItemService
         
         if (task == null)
             throw new Exception("Task not found.");
+        
+        // Prevent updates once task is completed
+        if (task.Status == TaskItemStatus.Completed)
+            throw new InvalidOperationException("Cannot update status. The task has already been completed.");
 
         // auditlog: original task status snapshot before PATCH  
         var originalTaskStatusDto = task.Status;
@@ -273,17 +285,13 @@ public class TaskItemService : TenantAwareService, ITaskItemService
         // --------
 
         // since my NewStatus is a string type, Parse the new status from string to enum
+        var validStatuses = string.Join(", ", Enum.GetNames(typeof(TaskItemStatus)));
         if (!Enum.TryParse<TaskItemStatus>(dto.NewStatus, out var newStatus))
-            throw new InvalidOperationException($"Invalid status value: {dto.NewStatus}");
+            throw new InvalidOperationException($"Invalid status value: {dto.NewStatus}. Valid status values are: {validStatuses}.");
 
         // validate status transition
         if (!TaskStatusTransition.CanTransition(task.Status, newStatus))
             throw new InvalidOperationException($"Cannot transition from {task.Status} to {newStatus}");
-
-        // // Allow only assigned user or manager to progress the task
-        // if (newStatus == TaskItemStatus.InProgress || newStatus == TaskItemStatus.Completed)
-        // {}
-
 
         // Set timestamps based on status
         if (task.Status != newStatus)
@@ -307,8 +315,15 @@ public class TaskItemService : TenantAwareService, ITaskItemService
             Updated = updatedTaskStatusDto
         };
 
+        string actionValue = dto.NewStatus switch
+        {
+            nameof(TaskItemStatus.InProgress) => "StartTask",
+            nameof(TaskItemStatus.Completed)  => "CompleteTask",
+            _ => throw new InvalidOperationException($"Unsupported status: {dto.NewStatus}") // fallback if other statuses are possible
+        };
+
         await _auditService.LogAsync(
-            action: "TaskItemStatusUpdate",
+            action: actionValue,
             entityName: "TaskItem",
             entityId: task.Id.ToString(),
             changes: JsonSerializer.Serialize(auditData)
