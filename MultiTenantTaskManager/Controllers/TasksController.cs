@@ -97,12 +97,12 @@ public class TasksController : ControllerBase
     // POST: /api/tasks/assign
     [Authorize(Policy = "canManageTasks")]
     [HttpPost("assign")]
-    public async Task<ActionResult<TaskItemDto>> AssignUser([FromBody] AssignTaskDto dto)
+    public async Task<ActionResult<TaskItemDto>> AssignUser([FromBody] AssignUserToTaskDto dto)
     {
-        Console.WriteLine("assign endpoint is hitting");
-        var updatedTask = await _taskService.AssignTaskAsync(dto);
+        //Console.WriteLine("assign endpoint is hitting");
+        var assignResult = await _taskService.AssignUserToTaskAsync(dto);
         
-        return Ok(updatedTask);
+        return Ok(assignResult);
     }
 
     // update the task status

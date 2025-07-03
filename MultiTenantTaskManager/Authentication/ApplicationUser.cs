@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Data.SqlClient;
 using MultiTenantTaskManager.Models;
 using MultiTenantTaskManager.Services;
 
@@ -11,9 +12,16 @@ public class ApplicationUser : IdentityUser, ISoftDeletable
 
     // Reference navigation property to Tenant
     public Tenant? Tenant { get; set; }
+    
+    
+    // One-to-many project-user assignment
+    public int? ProjectId { get; set; } // nullable for unassigned users
+    public Project? Project { get; set; } // navigation
+    public string? RoleInProject { get; set; } // AppRoles.Member or AppRoles.SpecialMember
 
 
-    public bool IsDeleted { get; set; }     // for soft deletion
-    public DateTime? DeletedAt { get; set; }    // for soft deletion
-    public string? DeletedBy { get; set; }  // for soft deletion
+    // for soft deletion
+    public bool IsDeleted { get; set; }    
+    public DateTime? DeletedAt { get; set; }  
+    public string? DeletedBy { get; set; } 
 }

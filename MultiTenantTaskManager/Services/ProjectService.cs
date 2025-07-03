@@ -1,8 +1,10 @@
 using System.Security.Claims;
 using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using MultiTenantTaskManager.Accessor;
+using MultiTenantTaskManager.Authentication;
 using MultiTenantTaskManager.Data;
 using MultiTenantTaskManager.DTOs;
 using MultiTenantTaskManager.DTOs.Project;
@@ -10,6 +12,7 @@ using MultiTenantTaskManager.Mappers;
 using MultiTenantTaskManager.Models;
 
 namespace MultiTenantTaskManager.Services;
+
 public class ProjectService : TenantAwareService, IProjectService
 {
     private readonly ApplicationDbContext _context;
@@ -18,6 +21,8 @@ public class ProjectService : TenantAwareService, IProjectService
     // private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuditService _auditService;
     private readonly IUserAccessor _userAccessor;
+    private readonly UserManager<ApplicationUser> _userManager;
+
 
     public ProjectService(
         ApplicationDbContext context,
@@ -25,7 +30,8 @@ public class ProjectService : TenantAwareService, IProjectService
         ITenantAccessor tenantAccessor,
         IAuthorizationService authorizationService,
         IAuditService auditService,
-        IUserAccessor userAccessor)
+        IUserAccessor userAccessor,
+        UserManager<ApplicationUser> userManager)
         : base(user, tenantAccessor, authorizationService)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
@@ -34,7 +40,9 @@ public class ProjectService : TenantAwareService, IProjectService
         // _authorizationService = authorizationService ?? throw new ArgumentNullException(nameof(authorizationService));
         // _httpContextAccessor = httpContextAccessor ?? throw new ArgumentNullException(nameof(httpContextAccessor));
         _userAccessor = userAccessor ?? throw new ArgumentNullException(nameof(userAccessor));
-    }   
+        _userManager = userManager;
+
+    }
     // Uncomment if you need to access User directly
     // private ClaimsPrincipal User
     // {
@@ -64,6 +72,7 @@ public class ProjectService : TenantAwareService, IProjectService
             .Where(p => p.TenantId == tenantId)
             .OrderBy(p => p.Name)
             .Include(p => p.Tasks)
+            .Include(p => p.AssignedUsers)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync();
@@ -86,7 +95,7 @@ public class ProjectService : TenantAwareService, IProjectService
             .AsNoTracking()
             // .FirstOrDefaultAsync(p => p.Id == projectId && p.TenantId == _tenantAccessor.TenantId);
             .FirstOrDefaultAsync(p => p.Id == projectId && p.TenantId == tenantId);
-            
+
         return project == null ? null : ProjectMapper.ToProjectDto(project);
     }
 
@@ -186,7 +195,7 @@ public class ProjectService : TenantAwareService, IProjectService
         // // Run SameTenant policy
         // var authResult = await _authorizationService.AuthorizeAsync(User, null, "SameTenant");
         // if (!authResult.Succeeded) throw new UnauthorizedAccessException("Forbidden: Cross-tenant access denied");
-        
+
         await AuthorizeSameTenantAsync();
 
         var tenantId = GetCurrentTenantId();
@@ -220,5 +229,41 @@ public class ProjectService : TenantAwareService, IProjectService
 
         return true;
     }
+    
+    public async Task<ProjectDto> AssignUsersToProjectAsync(AssignUsersToProjectDto dto)
+    {
+        var tenantId = _tenantAccessor.TenantId;
+
+        var project = await _context.Projects
+            .Include(p => p.AssignedUsers)
+            .FirstOrDefaultAsync(p => p.Id == dto.ProjectId && p.TenantId == tenantId);
+
+        if (project == null)
+            throw new KeyNotFoundException("Project not found.");
+
+        var userIds = dto.UserRoles.Keys.ToList();
+
+        var users = await _userManager.Users
+            .Where(u => userIds.Contains(u.Id) && u.TenantId == tenantId && !u.IsDeleted)
+            .ToListAsync();
+
+        if (users.Count != dto.UserRoles.Count)
+            throw new ArgumentException("Some users are invalid or not in the tenant.");
+
+        var specialMemberCount = dto.UserRoles.Values.Count(r => r == AppRoles.SpecialMember);
+        if (specialMemberCount > 1)
+            throw new InvalidOperationException("Only one SpecialMember is allowed per project.");
+
+        foreach (var user in users)
+        {
+            user.ProjectId = project.Id;
+            user.RoleInProject = dto.UserRoles[user.Id];
+        }
+
+        await _context.SaveChangesAsync();
+
+        return project.ToProjectDto(); // make sure this returns assigned users
+    }
+
 
 }

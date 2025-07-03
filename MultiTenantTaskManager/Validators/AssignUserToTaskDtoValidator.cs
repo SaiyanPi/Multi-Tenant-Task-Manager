@@ -7,9 +7,9 @@ using MultiTenantTaskManager.Data;
 using MultiTenantTaskManager.DTOs.TaskItem;
 
 namespace MultiTenantTaskManager.Validators;
-public class AssignTaskDtoValidator : AbstractValidator<AssignTaskDto>
+public class AssignUserToTaskDtoValidator : AbstractValidator<AssignUserToTaskDto>
 {
-    public AssignTaskDtoValidator(ApplicationDbContext dbContext, UserManager<ApplicationUser> userManager,
+    public AssignUserToTaskDtoValidator(ApplicationDbContext dbContext, UserManager<ApplicationUser> userManager,
         ITenantAccessor tenantAccessor)
     {
         RuleFor(x => x.TaskItemId)

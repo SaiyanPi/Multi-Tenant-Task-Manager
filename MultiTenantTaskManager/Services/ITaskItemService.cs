@@ -13,6 +13,6 @@ public interface ITaskItemService
     Task<TaskItemDto> UpdateTaskAsync(int taskId, UpdateTaskItemDto dto);
     Task<bool> DeleteTaskAsync(int taskId);
 
-    Task<TaskItemDto> AssignTaskAsync(AssignTaskDto dto);
+    Task<TaskItemDto> AssignUserToTaskAsync(AssignUserToTaskDto dto);
     Task<bool> UpdateTaskStatusAsync(int taskId, UpdateTaskItemStatusDto dto);
 }

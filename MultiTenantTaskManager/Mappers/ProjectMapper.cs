@@ -13,11 +13,20 @@ public static class ProjectMapper
             Id = project.Id,
             Name = project.Name,
             TenantId = project.TenantId,
+            // assigned
             // soft delete properties
             IsDeleted = project.IsDeleted,
             DeletedAt = project.DeletedAt,
             DeletedBy = project.DeletedBy,
-            Tasks = project.Tasks?.Select(t => t.ToTaskItemDto()).ToList() ?? new()
+            Tasks = project.Tasks?.Select(t => t.ToTaskItemDto()).ToList() ?? new(),
+
+            AssignedUsers = project.AssignedUsers?
+            .Select(u => new ProjectUserDto
+            {
+                UserId = u.Id,
+                Email = u.Email ?? string.Empty,
+                RoleInProject = u.RoleInProject ?? string.Empty
+            }).ToList() ?? new()
         };
     }
 

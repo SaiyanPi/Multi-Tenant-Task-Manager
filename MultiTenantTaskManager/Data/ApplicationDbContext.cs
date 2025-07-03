@@ -53,6 +53,12 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             .OnDelete(DeleteBehavior.Restrict); // this prevents cascading deletes from Tenant to TaskItem
                                                 // directly because we already have cascade delete from Tenant->Project->TaskItem
 
+        builder.Entity<ApplicationUser>()
+            .HasOne(u => u.Project)
+            .WithMany(p => p.AssignedUsers)
+            .HasForeignKey(u => u.ProjectId)
+            .OnDelete(DeleteBehavior.SetNull); // when project is deleted, clear reference/set ProjectId field to NULL
+
         // ----------------------------------------------------------------------------------------------------
 
         // Adding a global query filter for soft deletion

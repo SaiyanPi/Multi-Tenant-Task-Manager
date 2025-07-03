@@ -13,14 +13,14 @@ namespace MultiTenantTaskManager.Controllers;
 public class ProjectsController : ControllerBase
 {
     private readonly IProjectService _projectService;
-    
+
     public ProjectsController(IProjectService projectService)
     {
         _projectService = projectService ?? throw new ArgumentNullException(nameof(projectService));
     }
 
     // GET:/api/projects
-      [Authorize(Policy = "canManageProjects")]
+    [Authorize(Policy = "canManageProjects")]
     [HttpGet]
     public async Task<ActionResult<IEnumerable<ProjectDto>>> GetAllProjects()
     {
@@ -30,7 +30,7 @@ public class ProjectsController : ControllerBase
     }
 
     // GET:/api/projects/{id}
-     [Authorize(Policy = "canManageProjects")]
+    [Authorize(Policy = "canManageProjects")]
     [HttpGet("{id}")]
     public async Task<ActionResult<ProjectDto>> GetProjectById(int id)
     {
@@ -41,7 +41,7 @@ public class ProjectsController : ControllerBase
     }
 
     // POST:/api/projects
-     [Authorize(Policy = "canManageProjects")]
+    [Authorize(Policy = "canManageProjects")]
     [HttpPost]
     public async Task<ActionResult<ProjectDto>> CreateProject([FromBody] CreateProjectDto dto)
     {
@@ -68,13 +68,13 @@ public class ProjectsController : ControllerBase
     }
 
     // PUT:/api/projects/{id}
-     [Authorize(Policy = "canManageProjects")]
+    [Authorize(Policy = "canManageProjects")]
     [HttpPut("{id}")]
     public async Task<ActionResult<ProjectDto>> UpdateProject(int id, [FromBody] UpdateProjectDto dto)
     {
         if (!ModelState.IsValid) return BadRequest(ModelState);
 
-        if(id != dto.Id) return BadRequest("Project ID in the URL does not match the ID in the body.");
+        if (id != dto.Id) return BadRequest("Project ID in the URL does not match the ID in the body.");
 
         try
         {
@@ -88,12 +88,20 @@ public class ProjectsController : ControllerBase
     }
 
     // DELETE:/api/Projects/{id}
-     [Authorize(Policy = "canManageProjects")]
+    [Authorize(Policy = "canManageProjects")]
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteProject(int id)
     {
         var deleted = await _projectService.DeleteProjectAsync(id);
         if (!deleted) return NotFound($"Project with ID {id} not found.");
         return NoContent();
+    }
+    
+    [HttpPost("assign")]
+    public async Task<ActionResult<ProjectDto>> AssignUsers([FromBody] AssignUsersToProjectDto dto)
+    {
+        var assignResult = await _projectService.AssignUsersToProjectAsync(dto);
+
+        return Ok(assignResult);
     }
 }

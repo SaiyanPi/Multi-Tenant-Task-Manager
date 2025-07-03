@@ -11,4 +11,7 @@ public interface IProjectService
     Task<ProjectDto> CreateProjectAsync(CreateProjectDto dto);
     Task<ProjectDto> UpdateProjectAsync(int projectId, UpdateProjectDto dto);
     Task<bool> DeleteProjectAsync(int projectId);
+
+    Task<ProjectDto> AssignUsersToProjectAsync(AssignUsersToProjectDto dto);
+
 }

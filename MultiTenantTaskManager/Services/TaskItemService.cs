@@ -202,7 +202,7 @@ public class TaskItemService : TenantAwareService, ITaskItemService
         return true;
     }
 
-    public async Task<TaskItemDto> AssignTaskAsync(AssignTaskDto dto)
+    public async Task<TaskItemDto> AssignUserToTaskAsync(AssignUserToTaskDto dto)
     {
         var tenantId = _tenantAccessor.TenantId;
 
@@ -241,7 +241,7 @@ public class TaskItemService : TenantAwareService, ITaskItemService
             NewAssignedUserEmail = user.Email
         };
         
-        // differentiating Reassigned and AssignUser actions based on condition
+            // differentiating Reassigned and AssignUser actions based on condition
         string actionValue = previousAssignedUserId != null ? "Reassigned" : "AssignUser";
 
         await _auditService.LogAsync(

@@ -11,6 +11,9 @@ public class ProjectDto
     // Foreign key to Tenant
     public Guid TenantId { get; set; }
 
+    // Users assigned to this project
+    public List<ProjectUserDto> AssignedUsers { get; set; } = new();
+
     // Reference navigation property to Tenant
     public TenantDto? Tenant { get; set; } = null!;
 
