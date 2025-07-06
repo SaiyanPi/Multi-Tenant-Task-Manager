@@ -2,6 +2,6 @@ namespace MultiTenantTaskManager.DTOs.TaskItem;
 public class AssignUserToTaskDto
 {
     public int TaskItemId { get; set; }
-    public string AssignedUserId { get; set; } = string.Empty;
+    public string AssignedUser { get; set; } = string.Empty;
 
 }

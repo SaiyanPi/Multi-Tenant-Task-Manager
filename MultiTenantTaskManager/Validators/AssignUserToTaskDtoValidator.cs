@@ -7,6 +7,7 @@ using MultiTenantTaskManager.Data;
 using MultiTenantTaskManager.DTOs.TaskItem;
 
 namespace MultiTenantTaskManager.Validators;
+
 public class AssignUserToTaskDtoValidator : AbstractValidator<AssignUserToTaskDto>
 {
     public AssignUserToTaskDtoValidator(ApplicationDbContext dbContext, UserManager<ApplicationUser> userManager,
@@ -22,7 +23,7 @@ public class AssignUserToTaskDtoValidator : AbstractValidator<AssignUserToTaskDt
             })
             .WithMessage("Invalid or unauthorized task item ID.");
 
-        RuleFor(x => x.AssignedUserId)
+        RuleFor(x => x.AssignedUser)
             .NotEmpty()
             .MustAsync(async (userId, ct) =>
             {
@@ -32,4 +33,5 @@ public class AssignUserToTaskDtoValidator : AbstractValidator<AssignUserToTaskDt
             })
             .WithMessage("Invalid or unauthorized user.");
     }
+    
 }

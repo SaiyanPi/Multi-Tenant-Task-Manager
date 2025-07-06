@@ -8,8 +8,11 @@ using MultiTenantTaskManager.Authentication;
 using MultiTenantTaskManager.Data;
 using MultiTenantTaskManager.DTOs;
 using MultiTenantTaskManager.DTOs.Project;
+using MultiTenantTaskManager.Enums;
+using MultiTenantTaskManager.Helpers;
 using MultiTenantTaskManager.Mappers;
 using MultiTenantTaskManager.Models;
+using MultiTenantTaskManager.Validators;
 
 namespace MultiTenantTaskManager.Services;
 
@@ -93,6 +96,7 @@ public class ProjectService : TenantAwareService, IProjectService
 
         var project = await _context.Projects
             .AsNoTracking()
+            .Include(p => p.AssignedUsers)
             // .FirstOrDefaultAsync(p => p.Id == projectId && p.TenantId == _tenantAccessor.TenantId);
             .FirstOrDefaultAsync(p => p.Id == projectId && p.TenantId == tenantId);
 
@@ -229,7 +233,7 @@ public class ProjectService : TenantAwareService, IProjectService
 
         return true;
     }
-    
+
     public async Task<ProjectDto> AssignUsersToProjectAsync(AssignUsersToProjectDto dto)
     {
         var tenantId = _tenantAccessor.TenantId;
@@ -241,28 +245,123 @@ public class ProjectService : TenantAwareService, IProjectService
         if (project == null)
             throw new KeyNotFoundException("Project not found.");
 
-        var userIds = dto.UserRoles.Keys.ToList();
+        var userIds = dto.AssignedUsers.Keys.ToList();
 
         var users = await _userManager.Users
             .Where(u => userIds.Contains(u.Id) && u.TenantId == tenantId && !u.IsDeleted)
             .ToListAsync();
 
-        if (users.Count != dto.UserRoles.Count)
+        if (users.Count != dto.AssignedUsers.Count)
             throw new ArgumentException("Some users are invalid or not in the tenant.");
 
-        var specialMemberCount = dto.UserRoles.Values.Count(r => r == AppRoles.SpecialMember);
-        if (specialMemberCount > 1)
-            throw new InvalidOperationException("Only one SpecialMember is allowed per project.");
+        // var specialMemberCount = dto.UserRoles.Values.Count(r => r == AppRoles.SpecialMember);
+        // if (specialMemberCount > 1)
+        //     throw new InvalidOperationException("Only one SpecialMember is allowed per project.");
 
+        // var managerCount = dto.UserRoles.Values.Count(r => r == AppRoles.Manager);
+        // if (managerCount > 1)
+        //     throw new InvalidOperationException("Only one Manager is allowed per project.");
+
+        // --- for auditlog ---
+        var previousAssignedUsersId = project.AssignedUsers?.Select(u => new ProjectUserDto
+        {
+            UserId = u.Id,
+            Email = u.Email ?? string.Empty,
+            // RoleInProject = u.RoleInProject ?? string.Empty
+        }).ToList() ?? new();
+        var newAssignedUsersId = users.Select(u => new ProjectUserDto
+        {
+            UserId = u.Id,
+            Email = u.Email ?? string.Empty,
+            // RoleInProject = u.RoleInProject ?? string.Empty
+        }).ToList() ?? new();
+        // ------------------
+
+        // set task properties after assigning user
+        project.Status = ProjectStatus.Assigned;
+        
+        // set users properties after assigning users
         foreach (var user in users)
         {
             user.ProjectId = project.Id;
-            user.RoleInProject = dto.UserRoles[user.Id];
+            user.RoleInProject = dto.AssignedUsers[user.Id];
         }
 
         await _context.SaveChangesAsync();
 
+        // auditlog
+        var auditData = new
+        {
+            // PreviousAssignedUser = task.AssignedUserId,
+            PreviousAssignedUsers = previousAssignedUsersId,
+            NewAssignedUsers = newAssignedUsersId
+        };
+
+        // differentiating Reassigned and AssignUser actions based on condition
+        string actionValue = previousAssignedUsersId != null ? "Reassigned" : "AssignUser";
+
+        await _auditService.LogAsync(
+           action: actionValue,
+           entityName: "Project",
+           entityId: project.Id.ToString(),
+           changes: JsonSerializer.Serialize(auditData)
+       );
+
         return project.ToProjectDto(); // make sure this returns assigned users
+    }
+
+    public async Task<bool> UpdateProjectStatusAsync(int projectId, UpdateProjectStatusDto dto)
+    {
+        var tenantId = _tenantAccessor.TenantId;
+
+        var project = await _context.Projects.FirstOrDefaultAsync(p => p.Id == projectId && p.TenantId == tenantId);
+
+        if (project == null)
+        {
+            throw new Exception("Project not found.");
+        }
+
+        // Prevent updates once project is completed
+        if (project.Status == ProjectStatus.Completed)
+            throw new InvalidOperationException("Cannot update status. The project has already been completed.");
+
+        // calling custom UpdateProjectStatusValidator -------
+        var currentStatus = project.Status;
+        var validator = new UpdateProjectStatusDtoValidator();
+        var result = validator.ValidateWithContext(dto, currentStatus);
+
+        if (!result.IsValid)
+        {
+            throw new InvalidOperationException($"Invalid status update: {string.Join(", ", result.Errors.Select(e => e.ErrorMessage))}");
+        }
+        // --------
+
+        // since my NewStatus is a string type, Parse the new status from string to enum
+        var validStatuses = string.Join(", ", Enum.GetNames(typeof(ProjectStatus)));
+        if (!Enum.TryParse<ProjectStatus>(dto.NewStatus, out var newStatus))
+            throw new InvalidOperationException($"Invalid status value: {dto.NewStatus}. Valid status values are: {validStatuses}.");
+
+        // validate status transition
+        if (!ProjectStatusTransition.CanTransition(project.Status, newStatus))
+            throw new InvalidOperationException($"Cannot transition from {project.Status} to {newStatus}");
+
+        // Set timestamps based on status
+        if (project.Status != newStatus)
+        {
+            if (newStatus == ProjectStatus.InProgress)
+                project.StartedAt = DateTime.UtcNow;
+            else if (newStatus == ProjectStatus.Completed)
+                project.CompletedAt = DateTime.UtcNow;
+        }
+        project.Status = newStatus;
+        await _context.SaveChangesAsync();
+        return true;
+
+
+
+
+
+        
     }
 
 

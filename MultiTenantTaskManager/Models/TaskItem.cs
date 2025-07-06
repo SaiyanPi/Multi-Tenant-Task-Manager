@@ -4,7 +4,7 @@ using MultiTenantTaskManager.Enums;
 
 namespace MultiTenantTaskManager.Models;
 
-public class TaskItem : ISoftDeletable
+public class TaskItem : ISoftDeletable, IAuditable
 {
     // Primary key
     public int Id { get; set; }

@@ -1,13 +1,13 @@
 using FluentValidation;
 using FluentValidation.Results;
-using MultiTenantTaskManager.DTOs.TaskItem;
+using MultiTenantTaskManager.DTOs.Project;
 using MultiTenantTaskManager.Enums;
 
 namespace MultiTenantTaskManager.Validators;
 
-public class UpdateTaskItemStatusDtoValidator : AbstractValidator<UpdateTaskItemStatusDto>
+public class UpdateProjectStatusDtoValidator : AbstractValidator<UpdateProjectStatusDto>
 {
-   public UpdateTaskItemStatusDtoValidator()
+   public UpdateProjectStatusDtoValidator()
     {
         RuleFor(x => x.NewStatus)
             .NotEmpty()
@@ -15,10 +15,10 @@ public class UpdateTaskItemStatusDtoValidator : AbstractValidator<UpdateTaskItem
     }
     
     // custom
-    public ValidationResult ValidateWithContext(UpdateTaskItemStatusDto dto, TaskItemStatus currentStatus)
+    public ValidationResult ValidateWithContext(UpdateProjectStatusDto dto, ProjectStatus currentStatus)
     {
-        var expectedNextStatus = (TaskItemStatus)((int)currentStatus + 1);
-        if (!Enum.TryParse<TaskItemStatus>(dto.NewStatus, ignoreCase: true, out var parsed))
+        var expectedNextStatus = (ProjectStatus)((int)currentStatus + 1);
+        if (!Enum.TryParse<ProjectStatus>(dto.NewStatus, ignoreCase: true, out var parsed))
         {
             return new ValidationResult(new[]
             {

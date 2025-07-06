@@ -1,5 +1,6 @@
 using MultiTenantTaskManager.DTOs.Project;
 using MultiTenantTaskManager.DTOs.Tenant;
+using MultiTenantTaskManager.Helpers;
 using MultiTenantTaskManager.Models;
 
 namespace  MultiTenantTaskManager.Mappers;
@@ -12,21 +13,28 @@ public static class ProjectMapper
         {
             Id = project.Id,
             Name = project.Name,
+            Description = project.Description.Truncate(20),
             TenantId = project.TenantId,
-            // assigned
-            // soft delete properties
-            IsDeleted = project.IsDeleted,
-            DeletedAt = project.DeletedAt,
-            DeletedBy = project.DeletedBy,
-            Tasks = project.Tasks?.Select(t => t.ToTaskItemDto()).ToList() ?? new(),
 
+            // assigned
+            Tasks = project.Tasks?.Select(t => t.ToTaskItemDto()).ToList() ?? new(),
             AssignedUsers = project.AssignedUsers?
             .Select(u => new ProjectUserDto
             {
                 UserId = u.Id,
                 Email = u.Email ?? string.Empty,
                 RoleInProject = u.RoleInProject ?? string.Empty
-            }).ToList() ?? new()
+            }).ToList() ?? new(),
+            Status = project.Status,
+            DueDate = project.DueDate,
+            CreatedAt = project.CreatedAt,
+            StartedAt = project.StartedAt,
+            CompletedAt = project.CompletedAt
+
+            // soft delete properties
+            // IsDeleted = project.IsDeleted,
+            // DeletedAt = project.DeletedAt,
+            // DeletedBy = project.DeletedBy,
         };
     }
 
@@ -38,13 +46,18 @@ public static class ProjectMapper
         return new Project
         {
             Name = dto.Name,
+            Description = dto.Description,
+            DueDate = dto.DueDate
+
         };
     }
-    
+
     public static void UpdateFromDto(this Project project, UpdateProjectDto dto)
     {
         if (dto == null) throw new ArgumentNullException(nameof(dto));
 
         project.Name = dto.Name;
+        project.Description = dto.Description ?? string.Empty;
     }
+
 }

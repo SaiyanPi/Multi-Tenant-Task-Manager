@@ -14,10 +14,10 @@ public class ApplicationUser : IdentityUser, ISoftDeletable
     public Tenant? Tenant { get; set; }
     
     
-    // One-to-many project-user assignment
+    // user assignment
     public int? ProjectId { get; set; } // nullable for unassigned users
     public Project? Project { get; set; } // navigation
-    public string? RoleInProject { get; set; } // AppRoles.Member or AppRoles.SpecialMember
+    public string? RoleInProject { get; set; } // AppRoles.Member or AppRoles.SpecialMember pr AppRoles.Manager
 
 
     // for soft deletion

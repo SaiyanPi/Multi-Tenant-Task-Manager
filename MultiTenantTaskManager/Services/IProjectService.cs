@@ -1,5 +1,6 @@
 using MultiTenantTaskManager.DTOs;
 using MultiTenantTaskManager.DTOs.Project;
+using MultiTenantTaskManager.DTOs.TaskItem;
 using MultiTenantTaskManager.Models;
 
 namespace MultiTenantTaskManager.Services;
@@ -13,5 +14,7 @@ public interface IProjectService
     Task<bool> DeleteProjectAsync(int projectId);
 
     Task<ProjectDto> AssignUsersToProjectAsync(AssignUsersToProjectDto dto);
+    Task<bool> UpdateProjectStatusAsync(int projectId, UpdateProjectStatusDto dto);
+
 
 }

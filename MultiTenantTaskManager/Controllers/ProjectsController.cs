@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MultiTenantTaskManager.Authentication;
 using MultiTenantTaskManager.DTOs.Project;
+using MultiTenantTaskManager.DTOs.TaskItem;
 using MultiTenantTaskManager.Models;
 using MultiTenantTaskManager.Services;
 
@@ -96,7 +97,8 @@ public class ProjectsController : ControllerBase
         if (!deleted) return NotFound($"Project with ID {id} not found.");
         return NoContent();
     }
-    
+
+    [Authorize(Policy = "canManageProjects")]
     [HttpPost("assign")]
     public async Task<ActionResult<ProjectDto>> AssignUsers([FromBody] AssignUsersToProjectDto dto)
     {
@@ -104,4 +106,33 @@ public class ProjectsController : ControllerBase
 
         return Ok(assignResult);
     }
+    
+     // update the task status
+    // PATCH: /api/projects/1/status
+    //[Authorize(Policy = "canManageTasks")]
+    [HttpPatch("{id}/status")]
+    public async Task<IActionResult> UpdateProjectStatus(int id, [FromBody] UpdateProjectStatusDto dto)
+    {
+        try
+        {
+            var result = await _projectService.UpdateProjectStatusAsync(id, dto);
+            if (result)
+                return NoContent();
+
+            return BadRequest("Failed to update status");
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Forbid(ex.Message);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            return NotFound(ex.Message);
+        }
+    }
+    
 }

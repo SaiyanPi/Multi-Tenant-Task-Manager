@@ -10,6 +10,7 @@ public class TaskItemDto
     // Primary key
     public int Id { get; set; }
     public string Titles { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
 
 
     // Foreign key to Project

@@ -65,6 +65,7 @@ public class TaskItemService : TenantAwareService, ITaskItemService
 
         var task = await _context.TaskItems
             .AsNoTracking()
+            .Include(t => t.AssignedUser)
             .FirstOrDefaultAsync(t => t.Id == taskId && t.TenantId == tenantId);
 
         return task == null ? null : TaskItemMapper.ToTaskItemDto(task);
@@ -213,29 +214,34 @@ public class TaskItemService : TenantAwareService, ITaskItemService
         if (task == null)
             throw new KeyNotFoundException("Task not found.");
 
-        // for audit
+        // --- for audit ---
         var previousAssignedUserId = task.AssignedUserId;
+        // ------------------
 
-        var user = await _userManager.FindByIdAsync(dto.AssignedUserId);
+        var user = await _userManager.FindByIdAsync(dto.AssignedUser);
         if (user == null || user.TenantId != tenantId)
             throw new UnauthorizedAccessException("Invalid user for assignment.");
 
         // prevent other user except member and special member from getting assigned
-        var userRoles = await _userManager.GetRolesAsync(user);
-        if (!userRoles.Contains(AppRoles.Member) && !userRoles.Contains(AppRoles.SpecialMember))
+        var userRole = await _userManager.GetRolesAsync(user);
+        if (!userRole.Contains(AppRoles.Member) && !userRole.Contains(AppRoles.SpecialMember))
         {
             throw new UnauthorizedAccessException("User is not allowed to be assigned to a task.");
         }
 
+        // set task properties after assigning user
         task.AssignedUserId = user.Id;
-        task.Status = TaskItemStatus.Assigned; // set the task status assigned once assigned a user
+        task.Status = TaskItemStatus.Assigned;
+
+        // set user properties after assigning user
+        user.ProjectId = task.ProjectId;;
+        user.RoleInProject = string.Join(",", userRole);
 
         await _context.SaveChangesAsync();
 
-        // auditlog
+        //  --- auditlog ---
         var auditData = new
         {
-            // PreviousAssignedUser = task.AssignedUserId,
             PreviousAssignedUser = previousAssignedUserId,
             NewAssignedUser = user.Id,
             NewAssignedUserEmail = user.Email
@@ -250,6 +256,7 @@ public class TaskItemService : TenantAwareService, ITaskItemService
             entityId: task.Id.ToString(),
             changes: JsonSerializer.Serialize(auditData)
         );
+        // ---------------------
 
         return TaskItemMapper.ToTaskItemDto(task);
         // return task.ToTaskItemDto();
@@ -258,8 +265,6 @@ public class TaskItemService : TenantAwareService, ITaskItemService
     public async Task<bool> UpdateTaskStatusAsync(int taskId, UpdateTaskItemStatusDto dto)
     {
         var tenantId = _tenantAccessor.TenantId;
-        var userId = _userAccessor.UserId;
-
 
         var task = await _context.TaskItems.FirstOrDefaultAsync(t => t.Id == taskId && t.TenantId == tenantId);
         
@@ -273,7 +278,7 @@ public class TaskItemService : TenantAwareService, ITaskItemService
         // auditlog: original task status snapshot before PATCH  
         var originalTaskStatusDto = task.Status;
 
-        // for custom UpdateTaskItemStatusDtoValidator -------
+        // calling custom UpdateTaskItemStatusDtoValidator -------
         var currentStatus = task.Status;
         var validator = new UpdateTaskItemStatusDtoValidator();
         var result = validator.ValidateWithContext(dto, currentStatus);

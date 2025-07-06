@@ -7,4 +7,11 @@ public static class AppRoles
     public const string Manager = "Manager";
     public const string Member = "Member";
     public const string SpecialMember = "SpecialMember";
+
+    public static readonly HashSet<string> ValidProjectAssignableRoles = new()
+    {
+        Manager,
+        Member,
+        SpecialMember
+    };
 }

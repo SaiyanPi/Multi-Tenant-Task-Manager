@@ -1,13 +1,15 @@
 using MultiTenantTaskManager.Authentication;
+using MultiTenantTaskManager.Enums;
 using MultiTenantTaskManager.Services;
 
 namespace MultiTenantTaskManager.Models;
 
-public class Project : ISoftDeletable
+public class Project : ISoftDeletable, IAuditable
 {
     // Primary key
     public int Id { get; set; }
     public string Name { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
 
 
     // Foreign key to Tenant
@@ -21,7 +23,12 @@ public class Project : ISoftDeletable
 
 
     // One-to-many: A project has many users
-    public ICollection<ApplicationUser> AssignedUsers { get; set; } = new List<ApplicationUser>();    
+    public ICollection<ApplicationUser> AssignedUsers { get; set; } = new List<ApplicationUser>();
+    public ProjectStatus Status { get; set; } = ProjectStatus.Unassigned;
+    public DateTime? DueDate { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime? StartedAt { get; set; }
+    public DateTime? CompletedAt { get; set; }   
     
     
     public bool IsDeleted { get; set; }     // for soft deletion

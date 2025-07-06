@@ -6,6 +6,8 @@ public class CreateTaskItemDto
 
     // Foreign key to Project
     public int ProjectId { get; set; }
+    public string Description { get; set; } = string.Empty;
+
     public DateTime? DueDate { get; set; }
 
 }

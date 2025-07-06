@@ -94,14 +94,25 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     {
         var utcNow = DateTime.UtcNow;
 
-        foreach (var entry in ChangeTracker.Entries<TaskItem>())
+        // single entity
+        // foreach (var entry in ChangeTracker.Entries<TaskItem>())
+        // {
+        //     if (entry.State == EntityState.Added)
+        //     {
+        //         entry.Entity.CreatedAt = utcNow;
+        //     }
+
+        //     // Optional: Handle UpdatedAt/CompletedAt if needed here
+        // }
+
+
+        // globally
+        foreach (var entry in ChangeTracker.Entries<IAuditable>())
         {
             if (entry.State == EntityState.Added)
             {
                 entry.Entity.CreatedAt = utcNow;
             }
-
-            // Optional: Handle UpdatedAt/CompletedAt if needed here
         }
 
         return await base.SaveChangesAsync(cancellationToken);
