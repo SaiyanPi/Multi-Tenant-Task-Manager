@@ -333,6 +333,8 @@ public class TaskItemService : TenantAwareService, ITaskItemService
             entityId: task.Id.ToString(),
             changes: JsonSerializer.Serialize(auditData)
         );
+        // ------
+        
         return true;
     
     }

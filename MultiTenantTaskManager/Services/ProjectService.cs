@@ -325,6 +325,9 @@ public class ProjectService : TenantAwareService, IProjectService
         if (project.Status == ProjectStatus.Completed)
             throw new InvalidOperationException("Cannot update status. The project has already been completed.");
 
+         // auditlog: original task status snapshot before PATCH  
+        var originalProjectStatusDto = project.Status;
+
         // calling custom UpdateProjectStatusValidator -------
         var currentStatus = project.Status;
         var validator = new UpdateProjectStatusDtoValidator();
@@ -355,6 +358,32 @@ public class ProjectService : TenantAwareService, IProjectService
         }
         project.Status = newStatus;
         await _context.SaveChangesAsync();
+
+        // auditlog: refetch after patch
+        var updatedProject = await _context.Projects.FirstOrDefaultAsync(p => p.Id == projectId && p.TenantId == tenantId);
+        var updatedProjectStatusDto = updatedProject!.Status;
+
+        var auditData = new
+        {
+            Original = originalProjectStatusDto,
+            Updated = updatedProjectStatusDto
+        };
+
+        string actionValue = dto.NewStatus switch
+        {
+            nameof(ProjectStatus.InProgress) => "StartProject",
+            nameof(ProjectStatus.Completed)  => "CompleteProject",
+            _ => throw new InvalidOperationException($"Unsupported status: {dto.NewStatus}") // fallback if other statuses are possible
+        };
+
+        await _auditService.LogAsync(
+            action: actionValue,
+            entityName: "Project",
+            entityId: project.Id.ToString(),
+            changes: JsonSerializer.Serialize(auditData)
+        );
+        // ------
+
         return true;
 
 
