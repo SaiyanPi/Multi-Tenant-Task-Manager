@@ -1,7 +1,10 @@
 using System.Security.Claims;
+using Microsoft.EntityFrameworkCore;
 using MultiTenantTaskManager.Accessor;
 using MultiTenantTaskManager.Authentication;
 using MultiTenantTaskManager.Data;
+using MultiTenantTaskManager.DTOs.AuditLog;
+using MultiTenantTaskManager.Mappers;
 using MultiTenantTaskManager.Models;
 
 namespace MultiTenantTaskManager.Services;
@@ -64,5 +67,25 @@ public class AuditService : IAuditService
         await _dbContext.SaveChangesAsync();
     }
 
+    // auditlog endpoint for superadmins
+    public async Task<IEnumerable<AuditLogDto>> GetAllAuditLogsAsync(int page = 1, int pageSize = 20)
+    {
+        var auditLogs = await _dbContext.AuditLogs
+            .AsNoTracking()
+            .OrderBy(l => l.EntityName)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        return auditLogs.Select(AuditLogMapper.ToLogDto);
+
+    }
+
+    // public async Task<AuditLogDto?> GetAuditLogByIdAsync(int logId)
+    // {
+    //     var auditLog = await _dbContext.AuditLogs
+    //     .AsNoTracking()
+    //     .FirstOrDefaultAsync(l => l.Id )
+    // }
     
 }
