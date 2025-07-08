@@ -22,8 +22,17 @@ public class UpdateProjectDtoValidator : AbstractValidator<UpdateProjectDto>
             {
                 var tenantId = tenantAccessor.TenantId;
                 return !await dbContext.Projects.AnyAsync(p => p.Name == name && p.Id != dto.Id && p.TenantId == tenantId);
-            }).WithMessage("A project with this name already exists in your tenant.")
-            .When(p => p.Id > 0); // prevents running if ID is invalid
+            }).WithMessage("A project with this name already exists in your tenant.");
+            //.When(p => p.Id > 0); // prevents running if ID is invalid
+        
+        RuleFor(t => t.Description)
+            .NotEmpty().WithMessage("Task description is required")
+            .MinimumLength(10).WithMessage("Description must be at least 10 characters.")
+            .MaximumLength(1000).WithMessage("Description must not exceed 1000 characters.");
+        
+        RuleFor(t => t.DueDate)
+            .NotNull().WithMessage("Due date is required.")
+            .GreaterThanOrEqualTo(DateTime.Today).WithMessage("Due date cannot be in the past.");
     }
 }
 

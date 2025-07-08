@@ -25,13 +25,22 @@ public class CreateProjectDtoValidator : AbstractValidator<CreateProjectDto>
             .NotEmpty().WithMessage("Project Name is required.")
             .MaximumLength(100).WithMessage("Title must not exceed 100 characters.")
             // if this delegate return true, validation passes
-            .MustAsync(async (name, cancellation) => 
+            .MustAsync(async (name, cancellation) =>
             {
                 var tenantId = tenantAccessor.TenantId;
                 // if the project with the same tenantId exists(true), returns false(!true is false) and validation fails
                 return !await dbContext.Projects.AnyAsync(p => p.Name == name && p.TenantId == tenantId);
 
             }).WithMessage("Project title already exists in your tenant.");
+
+        RuleFor(t => t.Description)
+            .NotEmpty().WithMessage("Task description is required")
+            .MinimumLength(10).WithMessage("Description must be at least 10 characters.")
+            .MaximumLength(1000).WithMessage("Description must not exceed 1000 characters.");
+        
+        RuleFor(t => t.DueDate)
+            .NotNull().WithMessage("Due date is required.")
+            .GreaterThanOrEqualTo(DateTime.Today).WithMessage("Due date cannot be in the past.");
     }
 }
 

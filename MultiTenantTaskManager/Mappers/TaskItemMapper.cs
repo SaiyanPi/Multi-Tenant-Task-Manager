@@ -12,7 +12,7 @@ public static class TaskItemMapper
         {
             Id = task.Id,
             Titles = task.Titles,
-            Description = task.Description.Truncate(20),
+            Description = task.Description.Truncate(30),
             ProjectId = task.ProjectId,
             TenantId = task.TenantId,
 
@@ -49,7 +49,7 @@ public static class TaskItemMapper
         if (dto == null) throw new ArgumentNullException(nameof(dto));
 
         task.Titles = dto.Titles;
-        task.Description = dto.Description ?? string.Empty;
+        task.Description = dto.Description;
         task.ProjectId = dto.ProjectId;
         task.DueDate = dto.DueDate;
     }

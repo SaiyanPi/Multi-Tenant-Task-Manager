@@ -4,10 +4,10 @@ public class UpdateTaskItemDto
 {
     public int Id { get; set; }
     public string Titles { get; set; } = string.Empty;
-    public string? Description{ get; set; }
+    public string Description { get; set; } = string.Empty;
     
     // Foreign key to Project
     public int ProjectId { get; set; }
 
-    public DateTime? DueDate { get; set; }
+    public DateTime DueDate { get; set; }
 }

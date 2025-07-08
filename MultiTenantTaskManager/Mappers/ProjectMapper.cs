@@ -13,7 +13,7 @@ public static class ProjectMapper
         {
             Id = project.Id,
             Name = project.Name,
-            Description = project.Description.Truncate(20),
+            Description = project.Description.Truncate(30),
             TenantId = project.TenantId,
 
             // assigned
@@ -57,7 +57,7 @@ public static class ProjectMapper
         if (dto == null) throw new ArgumentNullException(nameof(dto));
 
         project.Name = dto.Name;
-        project.Description = dto.Description ?? string.Empty;
+        project.Description = dto.Description;
     }
 
 }
