@@ -8,7 +8,7 @@ namespace MultiTenantTaskManager.Controllers;
 [Authorize(Policy = "canManageTenants")]
 [ApiController]
 [Route("api/[controller]")]
-[SkipTenantResolution] 
+[SkipTenantResolution]
 public class LogsController : ControllerBase
 {
     private readonly IAuditService _auditService;
@@ -25,5 +25,23 @@ public class LogsController : ControllerBase
         var logs = await _auditService.GetAllAuditLogsAsync();
 
         return Ok(logs);
+    }
+
+    // GET:/api/logs/{id}
+    [HttpGet("{logId}")]
+    public async Task<ActionResult<IEnumerable<AuditLogDto>>> GetLog(int logId)
+    {
+        var log = await _auditService.GetAuditLogByIdAsync(logId);
+
+        return Ok(log);
+    }
+    
+    // GET:/api/logs/tenant/{tenantId}
+    [HttpGet("tenant/{tenantId}")]
+    public async Task<ActionResult<IEnumerable<AuditLogDto>>> GetLogByTenantId(Guid tenantId)
+    {
+        var tenantLogs = await _auditService.GetAuditLogsByTenantIdAsync(tenantId);
+
+        return Ok(tenantLogs);
     }
 }

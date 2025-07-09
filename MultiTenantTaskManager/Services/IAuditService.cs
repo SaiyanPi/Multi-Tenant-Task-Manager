@@ -15,7 +15,7 @@ public interface IAuditService
 
     // auditlog endpoint for superadmins
     Task<IEnumerable<AuditLogDto>> GetAllAuditLogsAsync(int page = 1, int pageSize = 20);
-    // Task<AuditLogDto?> GetAuditLogByIdAsync(int logId);
-
+    Task<AuditLogDto?> GetAuditLogByIdAsync(int logId);
+    Task<IEnumerable<AuditLogDto>> GetAuditLogsByTenantIdAsync(Guid tenantId, int page = 1, int pageSize = 10);
 
 }

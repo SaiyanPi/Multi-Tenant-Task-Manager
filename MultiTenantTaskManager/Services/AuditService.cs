@@ -81,11 +81,25 @@ public class AuditService : IAuditService
 
     }
 
-    // public async Task<AuditLogDto?> GetAuditLogByIdAsync(int logId)
-    // {
-    //     var auditLog = await _dbContext.AuditLogs
-    //     .AsNoTracking()
-    //     .FirstOrDefaultAsync(l => l.Id )
-    // }
+    public async Task<AuditLogDto?> GetAuditLogByIdAsync(int logId)
+    {
+        var auditLog = await _dbContext.AuditLogs
+            .AsNoTracking()
+            .FirstOrDefaultAsync(l => l.Id == logId);
+
+        return auditLog == null ? null : AuditLogMapper.ToLogDto(auditLog);
+    }
+
+    public async Task<IEnumerable<AuditLogDto>> GetAuditLogsByTenantIdAsync(Guid tenantId, int page = 1, int pageSize = 10)
+    {
+        var tenantAuditLogs = await _dbContext.AuditLogs
+            .Where(l => l.TenantId == tenantId)
+            .OrderByDescending(l => l.Timestamp)
+            .ToListAsync();
+
+        return tenantAuditLogs.Select(AuditLogMapper.ToLogDto);
+
+    }
+
     
 }
