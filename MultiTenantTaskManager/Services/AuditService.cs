@@ -30,7 +30,8 @@ public class AuditService : IAuditService
         // SuperAdmin lives outside Tenant scope
         var userRole = user?.Claims
             .FirstOrDefault(c => c.Type == ClaimTypes.Role)?.Value;
-        Console.WriteLine($"User Role: {userRole}");
+        //Console.WriteLine($"User Role: {userRole}");
+        
         if (userRole == AppRoles.SuperAdmin)
         {
             var superAdminAudit = new AuditLog

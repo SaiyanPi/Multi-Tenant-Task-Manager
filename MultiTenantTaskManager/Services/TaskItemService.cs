@@ -22,6 +22,7 @@ public class TaskItemService : TenantAwareService, ITaskItemService
     private readonly IAuditService _auditService;
     private readonly IUserAccessor _userAccessor;
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly INotificationService _notificationService;
 
     public TaskItemService(
         ApplicationDbContext context,
@@ -30,13 +31,15 @@ public class TaskItemService : TenantAwareService, ITaskItemService
         IAuthorizationService authorizationService,
         IAuditService auditService,
         IUserAccessor userAccessor,
-        UserManager<ApplicationUser> userManager)
+        UserManager<ApplicationUser> userManager,
+        INotificationService notificationService)
         : base(user, tenantAccessor, authorizationService)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
         _auditService = auditService ?? throw new ArgumentNullException(nameof(auditService));
         _userAccessor = userAccessor ?? throw new ArgumentNullException(nameof(userAccessor));
         _userManager = userManager;
+        _notificationService = notificationService;
     }
 
     public async Task<IEnumerable<TaskItemDto>> GetAllTaskAsync(int page = 1, int pageSize = 10)
@@ -238,6 +241,12 @@ public class TaskItemService : TenantAwareService, ITaskItemService
         user.RoleInProject = string.Join(",", userRole);
 
         await _context.SaveChangesAsync();
+
+        // call SignalR notification
+        var userId = user.Id;
+        var taskTitle = task.Titles;
+        await _notificationService.SendNotificationAsync(userId, "New Task Assigned", $"You've been assigned to task '{taskTitle}'");
+        // ------
 
         //  --- auditlog ---
         var auditData = new

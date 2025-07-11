@@ -15,71 +15,54 @@ public class TenantResolutionMiddleware(RequestDelegate next)
     public async Task InvokeAsync(HttpContext context, ITenantAccessor tenantAccessor,
     ApplicationDbContext dbContext, UserManager<ApplicationUser> userManager)
     {
-        // If the request is for tenant management endpoints, skip tenant resolution
-        // This is useful for endpoints like tenant creation or management that do not require a tenant context
-    
-        // // following code is commented because it is not feasible to Hardcode Middleware Exceptions for 
-        // // Every Tenant Endpoint
-
-        // // // Allow open endpoints like tenant creation
-        // // var path = context.Request.Path.Value?.ToLower();
-        // // if (path != null && path.StartsWith("/api/tenant") && context.Request.Method == "POST")
-        // // {
-        // //     // Skip tenant resolution for tenant management endpoints
-        // //     await next(context);
-        // //     return;
-        // // }
-
-        // // Check if the endpoint has the SkipTenantResolution attribute
-        // var endpoint = context.GetEndpoint();
-        // var skipTenantResolution = endpoint?.Metadata.GetMetadata<SkipTenantResolutionAttribute>() != null;
-        // if (skipTenantResolution)
+        // following code is commented because we extract tenantId from JWT token in step 2
+        
+        // // 0. Handle SignalR requests with tenantId in query string from NotificationClient
+        // var path = context.Request.Path.Value;
+        // if (path != null && path.StartsWith("/hubs/notifications", StringComparison.OrdinalIgnoreCase))
         // {
-        //     await next(context);
-        //     return;
-        // }
+        //     var tenantIdQuery = context.Request.Query["tenantId"].FirstOrDefault();
 
-        // // if (context.Request.Headers.TryGetValue("X-Tenant-ID", out var tenantIdHeader) &&
-        // //     Guid.TryParse(tenantIdHeader, out var tenantId))
-        // // {
-        // //     tenantAccessor.TenantId = tenantId;
-        // // }
-        // // else
-        // // {
-        // //     // You could return 400 here or fallback logic
-        // //     context.Response.StatusCode = 400;
-        // //     await context.Response.WriteAsync("Tenant ID is required in X-Tenant-ID header.");
-        // //     return;
-        // // }
-        // // await next(context);
+        //     if (!string.IsNullOrWhiteSpace(tenantIdQuery) && Guid.TryParse(tenantIdQuery, out var tenantGuid))
+        //     {
+        //         var tenantExists = await dbContext.Tenants.AnyAsync(t => t.Id == tenantGuid);
+        //         if (!tenantExists)
+        //         {
+        //             context.Response.StatusCode = 400;
+        //             await context.Response.WriteAsync("Invalid tenant identifier in query string.");
+        //             return;
+        //         }
 
-        // if (!context.Request.Headers.TryGetValue("X-Tenant-ID", out var tenantIdHeader) ||
-        //     !Guid.TryParse(tenantIdHeader, out var tenantId))
-        // {
+        //         tenantAccessor.TenantId = tenantGuid;
+        //         await next(context);
+        //         return;
+        //     }
+
+        //     // Reject if missing or invalid
         //     context.Response.StatusCode = 400;
-        //     await context.Response.WriteAsync("Missing or invalid X-Tenant-ID header.");
+        //     await context.Response.WriteAsync("Missing or invalid tenant identifier in query string for SignalR.");
         //     return;
         // }
 
-        // // Check if tenant exists in the database
-        // var tenantExists = await dbContext.Tenants.AnyAsync(t => t.Id == tenantId);
-        // if (!tenantExists)
-        // {
-        //     context.Response.StatusCode = 400;
-        //     await context.Response.WriteAsync("Invalid Tenant ID.");
-        //     return;
-        // }
 
-        // tenantAccessor.TenantId = tenantId;
-
-        // await next(context);
-
-    // ---------------------------------------------------------------------------------------------------
 
         // 1. Skip if marked with [SkipTenantResolution]
         var endpoint = context.GetEndpoint();
         var skipTenantResolution = endpoint?.Metadata.GetMetadata<SkipTenantResolutionAttribute>() != null;
         if (skipTenantResolution)
+        {
+            await next(context);
+            return;
+        }
+
+        // 1.1. Skip for SignalR negotiate requests (no token yet)
+        // if we remove following code, the connection will still be made and the notification will still be
+        // pushed but there will be some errors in the dev console regarding WebSocket. The error occurs because
+        // TenantResolutionMiddleware is rejecting unauthenticated or unauthenticated WebSocket preflight
+        // requests, before SignalR can even negotiate the connection.
+        
+        if (context.Request.Path.StartsWithSegments("/hubs/notifications", StringComparison.OrdinalIgnoreCase)
+            && context.Request.Query.ContainsKey("id")) // this means it's the negotiation or WebSocket upgrade
         {
             await next(context);
             return;
@@ -117,7 +100,7 @@ public class TenantResolutionMiddleware(RequestDelegate next)
             {
                 PropertyNameCaseInsensitive = true
             });
-            
+
             if (loginData?.Email != null)
             {
                 // var user = await userManager.FindByEmailAsync(loginData.Email);
@@ -186,6 +169,9 @@ public class TenantResolutionMiddleware(RequestDelegate next)
         // 4. Fail if no valid tenant ID found
         context.Response.StatusCode = 400;
         await context.Response.WriteAsync("Missing or invalid tenant identifier.");
+
+        // ---------------------------------------------------------------------------------------------------
+
     }
     
 }

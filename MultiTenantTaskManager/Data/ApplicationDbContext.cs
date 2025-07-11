@@ -14,6 +14,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<Project> Projects { get; set; }
     public DbSet<TaskItem> TaskItems { get; set; }
     public DbSet<AuditLog> AuditLogs { get; set; } // For tracking changes
+    public DbSet<Notification> Notifications { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

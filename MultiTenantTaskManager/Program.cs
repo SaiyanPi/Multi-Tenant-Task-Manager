@@ -4,12 +4,15 @@ using System.Text.Json.Serialization;
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using MultiTenantTaskManager.Accessor;
 using MultiTenantTaskManager.Authentication;
 using MultiTenantTaskManager.Data;
+using MultiTenantTaskManager.Hubs;
 using MultiTenantTaskManager.Middleware;
 using MultiTenantTaskManager.Services;
 using MultiTenantTaskManager.Validators;
@@ -61,6 +64,26 @@ builder.Services.AddAuthentication(options =>
         // // This is what tells ASP.NET to use ClaimTypes.Name as Identity.Name
         // NameClaimType = ClaimTypes.Name,
         // RoleClaimType = ClaimTypes.Role,
+    };
+
+    // KEY piece for SignalR: SignalR sends the token via query string, not the authorization header
+    options.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            // If the request is for SignalR and token is in the query string
+            var accessToken = context.Request.Query["access_token"];
+
+            // If the request is for the hub...
+            var path = context.HttpContext.Request.Path;
+            if (!string.IsNullOrEmpty(accessToken) &&
+                path.StartsWithSegments("/hubs/notifications"))
+            {
+                context.Token = accessToken;
+            }
+
+            return Task.CompletedTask;
+        }
     };
 });
 
@@ -137,6 +160,26 @@ builder.Services
 // Register all validators from the current assembly or specify explicitly
 builder.Services.AddValidatorsFromAssemblyContaining<CreateProjectDtoValidator>();
 
+builder.Services.AddScoped<INotificationService, NotificationService>();
+builder.Services.AddSingleton<IUserIdProvider, CustomUserIdProvider>();
+
+
+
+
+// Add SignalR
+builder.Services.AddSignalR();
+// Enable CORS
+var corsPolicy = new CorsPolicyBuilder()
+    .AllowAnyHeader()
+    .AllowAnyMethod()
+    .AllowCredentials()
+    .WithOrigins("http://127.0.0.1:5500")
+    .Build();
+builder.Services.AddCors(options =>{
+    options.AddPolicy("CorsPolicy", corsPolicy);
+});
+
+
 
 var app = builder.Build();
 
@@ -148,13 +191,17 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseCors("CorsPolicy");
 
-// registering custom middleware for tenant resolution
-app.UseMiddleware<TenantResolutionMiddleware>();
+app.UseRouting();
 
 app.UseAuthentication();
 
 app.UseAuthorization();
+
+// registering custom middleware for tenant resolution
+app.UseMiddleware<TenantResolutionMiddleware>();
+
 
 // check if the roles exist in database table AspNetRoles, if no then create them as follows.
 using (var serviceScope = app.Services.CreateScope())
@@ -189,5 +236,7 @@ using (var serviceScope = app.Services.CreateScope())
 }
 
 app.MapControllers();
+
+app.MapHub<NotificationHub>(NotificationHub.HubUrl);
 
 app.Run();

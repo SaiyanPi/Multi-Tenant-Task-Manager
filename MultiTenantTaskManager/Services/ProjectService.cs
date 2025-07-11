@@ -3,6 +3,7 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration.UserSecrets;
 using MultiTenantTaskManager.Accessor;
 using MultiTenantTaskManager.Authentication;
 using MultiTenantTaskManager.Data;
@@ -25,6 +26,7 @@ public class ProjectService : TenantAwareService, IProjectService
     private readonly IAuditService _auditService;
     private readonly IUserAccessor _userAccessor;
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly INotificationService _notificationService;
 
 
     public ProjectService(
@@ -34,7 +36,8 @@ public class ProjectService : TenantAwareService, IProjectService
         IAuthorizationService authorizationService,
         IAuditService auditService,
         IUserAccessor userAccessor,
-        UserManager<ApplicationUser> userManager)
+        UserManager<ApplicationUser> userManager,
+        INotificationService notificationService)
         : base(user, tenantAccessor, authorizationService)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
@@ -44,6 +47,7 @@ public class ProjectService : TenantAwareService, IProjectService
         // _httpContextAccessor = httpContextAccessor ?? throw new ArgumentNullException(nameof(httpContextAccessor));
         _userAccessor = userAccessor ?? throw new ArgumentNullException(nameof(userAccessor));
         _userManager = userManager;
+        _notificationService = notificationService;
 
     }
     // Uncomment if you need to access User directly
@@ -288,6 +292,13 @@ public class ProjectService : TenantAwareService, IProjectService
         }
 
         await _context.SaveChangesAsync();
+
+        // call SignalR notification
+        var projectName = project.Name;
+        foreach (var userId in userIds)
+        {
+            await _notificationService.SendNotificationAsync(userId, "New Project Assigned", $"You've been assigned to project '{projectName}'");
+        }
 
         // auditlog
         var auditData = new
