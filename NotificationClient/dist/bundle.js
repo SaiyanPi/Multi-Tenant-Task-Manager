@@ -3783,9 +3783,31 @@ const connection = new signalR.HubConnectionBuilder()
 connection.on("ReceiveNotification", (notification) => {
     const ul = document.getElementById("notifications");
     const li = document.createElement("li");
+    // Set the element ID for later lookup
+    li.id = `notification-${notification.id}`;
     li.textContent = `[${new Date(notification.createdAt).toLocaleTimeString()}] ${notification.title}: ${notification.message}`;
+    // Add "Mark as Read" button
+    const button = document.createElement("button");
+    button.textContent = "Mark as Read";
+    button.onclick = () => {
+        connection.invoke("MarkAsRead", notification.id)
+            .catch(err => console.error("Error marking as read:", err));
+    };
+    li.appendChild(button);
     ul.prepend(li);
 });
+// Handle real-time IsRead update
+connection
+    .on("NotificationReadUpdated", (update) => {
+    console.log(`Notification ${update.NotificationId} marked as read in real-time.`);
+    const li = document.getElementById(`notification-${update.NotificationId}`);
+    if (li) {
+        li.classList.add("read");
+        li.style.opacity = "0.5";
+        li.style.textDecoration = "line-through";
+    }
+});
+// Start the connection
 connection
     .start()
     .then(() => console.log("Connected to SignalR hub"))

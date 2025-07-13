@@ -12,7 +12,10 @@ public static class NotificationMapper
             Id = notification.Id,
             Title = notification.Title,
             Message = notification.Message,
-            CreatedAt = notification.CreatedAt
+            CreatedAt = notification.CreatedAt,
+            IsRead = notification.IsRead,
+            TenantId = notification.TenantId,
+            UserId = notification.UserId
         };
     }
 }

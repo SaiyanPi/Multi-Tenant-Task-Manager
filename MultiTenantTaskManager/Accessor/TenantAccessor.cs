@@ -1,9 +1,10 @@
 namespace MultiTenantTaskManager.Accessor;
 
+// tenant accessor uses IHHttpContextAccessor for context following by user. tenantId is from headers.
 public class TenantAccessor : ITenantAccessor
 {
     // public Guid TenantId { get; set; }
-    
+
     private readonly IHttpContextAccessor _httpContextAccessor;
     private Guid? _tenantId;
 
@@ -46,7 +47,7 @@ public class TenantAccessor : ITenantAccessor
 
             throw new InvalidOperationException("Tenant ID is missing or invalid in headers.");
         }
-          set
+        set
         {
             _tenantId = value;
         }

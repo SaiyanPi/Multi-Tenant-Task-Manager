@@ -55,7 +55,7 @@ public class TenantResolutionMiddleware(RequestDelegate next)
             return;
         }
 
-        // 1.1. Skip for SignalR negotiate requests (no token yet)
+        // 0.0. Skip for SignalR negotiate requests (no token yet)
         // if we remove following code, the connection will still be made and the notification will still be
         // pushed but there will be some errors in the dev console regarding WebSocket. The error occurs because
         // TenantResolutionMiddleware is rejecting unauthenticated or unauthenticated WebSocket preflight
@@ -78,7 +78,7 @@ public class TenantResolutionMiddleware(RequestDelegate next)
         //     return;
         // }
 
-        // 5. Skip Tenant Resolution on Login IF the Email Belongs to a SuperAdmin
+        // 2. Skip Tenant Resolution on Login IF the Email Belongs to a SuperAdmin
         var isLoginEndpoint = context.Request.Path.Equals("/api/account/login", StringComparison.OrdinalIgnoreCase);
 
         if (isLoginEndpoint && context.Request.Method == HttpMethods.Post)
@@ -128,7 +128,7 @@ public class TenantResolutionMiddleware(RequestDelegate next)
 
         Guid tenantId;
 
-        // 2. Try to extract tenant from JWT claims
+        // 3. Try to extract tenant from JWT claims
         if (context.User.Identity?.IsAuthenticated == true)
         {
             var tenantClaim = context.User.FindFirst("tenant_id");
@@ -149,7 +149,7 @@ public class TenantResolutionMiddleware(RequestDelegate next)
             }
         }
 
-        // 3. Fallback to X-Tenant-ID header (optional)
+        // 4. Fallback to X-Tenant-ID header (optional)
         if (context.Request.Headers.TryGetValue("X-Tenant-ID", out var tenantIdHeader) &&
             Guid.TryParse(tenantIdHeader, out tenantId))
         {
@@ -166,7 +166,7 @@ public class TenantResolutionMiddleware(RequestDelegate next)
             return;
         }
 
-        // 4. Fail if no valid tenant ID found
+        // 5. Fail if no valid tenant ID found
         context.Response.StatusCode = 400;
         await context.Response.WriteAsync("Missing or invalid tenant identifier.");
 

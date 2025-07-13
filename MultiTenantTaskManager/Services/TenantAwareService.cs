@@ -4,6 +4,7 @@ using MultiTenantTaskManager.Accessor;
 
 namespace MultiTenantTaskManager.Services;
 
+// TenantAwareService uses tenant accessor
 public abstract class TenantAwareService
 {
     protected readonly ClaimsPrincipal _user;
@@ -26,7 +27,7 @@ public abstract class TenantAwareService
             throw new UnauthorizedAccessException("Forbidden: Cross-tenant access denied");
         }
     }
-    
+
     protected Guid GetCurrentTenantId() => _tenantAccessor.TenantId;
-   
+
 }

@@ -161,7 +161,7 @@ builder.Services
 builder.Services.AddValidatorsFromAssemblyContaining<CreateProjectDtoValidator>();
 
 builder.Services.AddScoped<INotificationService, NotificationService>();
-builder.Services.AddSingleton<IUserIdProvider, CustomUserIdProvider>();
+//builder.Services.AddSingleton<IUserIdProvider, CustomUserIdProvider>();
 
 
 
