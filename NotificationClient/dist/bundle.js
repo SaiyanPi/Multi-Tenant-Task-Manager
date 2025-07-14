@@ -3791,6 +3791,14 @@ connection.on("ReceiveNotification", (notification) => {
     button.textContent = "Mark as Read";
     button.onclick = () => {
         connection.invoke("MarkAsRead", notification.id)
+            .then(() => {
+            // Visually mark as read
+            li.classList.add("read");
+            li.style.opacity = "0.5";
+            li.style.textDecoration = "line-through";
+            // Remove the button to prevent duplicate clicks
+            button.remove();
+        })
             .catch(err => console.error("Error marking as read:", err));
     };
     li.appendChild(button);

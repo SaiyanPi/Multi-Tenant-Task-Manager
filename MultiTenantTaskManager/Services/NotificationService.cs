@@ -71,8 +71,6 @@ public class NotificationService : INotificationService
         var notification = await _context.Notifications
             .FirstOrDefaultAsync(n => n.TenantId == tenantId && n.UserId == userId && n.Id == notificationId);
 
-        Console.WriteLine($"notification id: {notificationId} for user: {userId} in tenant: {tenantId}");
-        
         if (notification == null)
             throw new KeyNotFoundException("Notification not found.");
 
