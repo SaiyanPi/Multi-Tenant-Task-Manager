@@ -34,7 +34,12 @@ public interface INotificationService
 
     Task<IEnumerable<NotificationDto>> GetUserNotificationsAsync(Guid tenantId, string userId);
     Task MarkAsReadAsync(Guid tenantId, string userId, Guid notificationId);
-    
+
+    Task<IEnumerable<NotificationDto>> GetAllNotificationsAsync(); // for superadmin
+    Task<IEnumerable<NotificationDto>> GetUnreadNotificationsAsync(); //for superadmin
+
+    Task<IEnumerable<NotificationDto>> GetAllNotificationsForTenantAsync(Guid tenantId); // for tenant admin
+    Task<IEnumerable<NotificationDto>> GetUnreadNotificationsForTenantAsync(Guid tenantId); // for tenant admin
     
 
 }

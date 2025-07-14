@@ -79,4 +79,46 @@ public class NotificationService : INotificationService
 
     }
 
+    // outside tenant scope
+    public async Task<IEnumerable<NotificationDto>> GetAllNotificationsAsync()
+    {
+        var notifications = await _context.Notifications
+            .OrderByDescending(n => n.CreatedAt)
+            .ToListAsync();
+
+        return notifications.Select(NotificationMapper.ToNotificationDto);
+    }
+
+     // outside tenant scope
+    public async Task<IEnumerable<NotificationDto>> GetUnreadNotificationsAsync()
+    {
+        var notifications = await _context.Notifications
+            .Where(n => !n.IsRead)
+            .OrderByDescending(n => n.CreatedAt)
+            .ToListAsync();
+
+        return notifications.Select(NotificationMapper.ToNotificationDto);
+    }
+
+    // tenant scope 
+    public async Task<IEnumerable<NotificationDto>> GetAllNotificationsForTenantAsync(Guid tenantId)
+    {
+        var notifications = await _context.Notifications
+            .Where(n => n.TenantId == tenantId)
+            .OrderByDescending(n => n.CreatedAt)
+            .ToListAsync();
+
+        return notifications.Select(NotificationMapper.ToNotificationDto);
+    }
+
+    // tenant scope
+    public async Task<IEnumerable<NotificationDto>> GetUnreadNotificationsForTenantAsync(Guid tenantId)
+    {
+        var notifications = await _context.Notifications
+            .Where(n => n.TenantId == tenantId && !n.IsRead)
+            .OrderByDescending(n => n.CreatedAt)
+            .ToListAsync();
+
+        return notifications.Select(NotificationMapper.ToNotificationDto);
+    }
 }
