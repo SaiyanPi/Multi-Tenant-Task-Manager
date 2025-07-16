@@ -35,10 +35,12 @@ public class TaskItem : ISoftDeletable, IAuditable
     public DateTime? CompletedAt { get; set; }
 
 
+    // comments related to the task
+    public ICollection<Comment> Comments { get; set; } = new List<Comment>();
 
     public bool IsDeleted { get; set; }     // for soft deletion
     public DateTime? DeletedAt { get; set; }    // for soft deletion
-    public string? DeletedBy { get; set; }  // for soft deletion
+    public string DeletedBy { get; set; }  = string.Empty; // for soft deletion
 
 
 }

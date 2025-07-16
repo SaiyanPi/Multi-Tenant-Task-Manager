@@ -15,6 +15,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<TaskItem> TaskItems { get; set; }
     public DbSet<AuditLog> AuditLogs { get; set; } // For tracking changes
     public DbSet<Notification> Notifications { get; set; }
+    public DbSet<Comment> Comments { get; set; } // For comments on tasks and projects
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -51,6 +52,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             .HasOne(t => t.Tenant)
             .WithMany()
             .HasForeignKey(t => t.TenantId)
+            .IsRequired()
             .OnDelete(DeleteBehavior.Restrict); // this prevents cascading deletes from Tenant to TaskItem
                                                 // directly because we already have cascade delete from Tenant->Project->TaskItem
 
@@ -59,6 +61,35 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             .WithMany(p => p.AssignedUsers)
             .HasForeignKey(u => u.ProjectId)
             .OnDelete(DeleteBehavior.SetNull); // when project is deleted, clear reference/set ProjectId field to NULL
+
+
+        
+        // Comment -> Project
+        builder.Entity<Comment>()
+            .HasOne(c => c.Project)
+            .WithMany(p => p.Comments)
+            .HasForeignKey(c => c.ProjectId)
+            .OnDelete(DeleteBehavior.Restrict); // keeps comments even if the project is deleted(preserve history)
+        
+        // Comment -> TaskItem
+        builder.Entity<Comment>()
+            .HasOne(c => c.TaskItem)
+            .WithMany(t => t.Comments)
+            .HasForeignKey(c => c.TaskItemId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // Comment -> User(Author)
+        builder.Entity<Comment>()
+            .HasOne(c => c.User)
+            .WithMany()
+            .HasForeignKey(c => c.UserId)
+            .OnDelete(DeleteBehavior.Restrict); 
+
+        // Comment Properties
+        builder.Entity<Comment>()
+            .Property(c => c.Content)
+            .IsRequired()
+            .HasMaxLength(1000);
 
         // ----------------------------------------------------------------------------------------------------
 
