@@ -16,8 +16,8 @@ namespace MultiTenantTaskManager.Services;
 public class UserService : TenantAwareService, IUserService
 {
     private readonly UserManager<ApplicationUser> _userManager;
-        private readonly IAuditService _auditService;
-        private readonly IUserAccessor _userAccessor; // inject UpdateUserDtoValidator because it does not have a controller action
+    private readonly IAuditService _auditService;
+    private readonly IUserAccessor _userAccessor; // inject UpdateUserDtoValidator because it does not have a controller action
     private readonly IValidator<UpdateUserDto> _updateUserDtoValidator;
 
 

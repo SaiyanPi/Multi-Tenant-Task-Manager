@@ -19,7 +19,7 @@ public interface INotificationService
     // HttpContext class still works in NotificationService class, it does not in NotificationHub class.
     // we must use the hub Context for retrieving userId and tenantId.
 
-    // if we do not pass the enantId and userId and instead retrieve them from JWT claim in service class
+    // if we do not pass the tenantId and userId and instead retrieve them from JWT claim in service class
     // then the methods will have different number of parameters in hub class and service class and calling
     // the service method from hub class will not work.
     // for eg, we call MarkAsReadAsync method from hub class like:
