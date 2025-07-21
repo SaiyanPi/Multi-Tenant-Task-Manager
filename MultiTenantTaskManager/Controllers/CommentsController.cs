@@ -8,7 +8,9 @@ using MultiTenantTaskManager.Services;
 namespace MultiTenantTaskManager.Controllers;
 
 // Unlike other services userId and tenantId are extracted here in the controller via accessor 
-// because why not? 
+// because why not?
+// ⚠️ If you are someone referencing my code, please follow the pattern by injecting them directly into
+// the service instead.)
 
 [ApiController]
 [Authorize]

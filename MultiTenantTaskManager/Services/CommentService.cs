@@ -1,5 +1,7 @@
+using System.Security.Claims;
 using System.Text.Json;
 using DTOs.Comment;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using MultiTenantTaskManager.Accessor;
@@ -10,7 +12,7 @@ using MultiTenantTaskManager.Mappers;
 
 namespace MultiTenantTaskManager.Services;
 
-public class CommentService : ICommentService
+public class CommentService : TenantAwareService, ICommentService
 {
 
     private readonly ApplicationDbContext _context;
@@ -18,8 +20,15 @@ public class CommentService : ICommentService
     private readonly IUserAccessor _userAccessor;
     private readonly IAuditService _auditService;
 
-    public CommentService(ApplicationDbContext context, UserManager<ApplicationUser> userManager,
-        IUserAccessor userAccessor, IAuditService auditService)
+    public CommentService(
+        ApplicationDbContext context,
+        ClaimsPrincipal user,
+        ITenantAccessor tenantAccessor,
+        IAuthorizationService authorizationService,
+        UserManager<ApplicationUser> userManager,
+        IUserAccessor userAccessor,
+        IAuditService auditService) 
+        : base(user, tenantAccessor, authorizationService)
     {
         _context = context;
         _userManager = userManager;
@@ -31,36 +40,71 @@ public class CommentService : ICommentService
     {
         if (dto == null) throw new ArgumentNullException(nameof(dto));
 
-        var comment = dto.ToCommentModel();
-        comment.UserId = userId;
-        comment.TenantId = tenantId;
+        await AuthorizeSameTenantAsync();
 
-        await _context.Comments.AddAsync(comment);
-        await _context.SaveChangesAsync();
+        // XOR logic
+        if (dto.TaskItemId.HasValue ^ dto.ProjectId.HasValue)
+        {
+            if (dto.TaskItemId.HasValue)
+            {
+                var taskExist = await _context.TaskItems
+                    .AnyAsync(t => t.Id == dto.TaskItemId && t.TenantId == tenantId && !t.IsDeleted);
+                if (!taskExist)
+                    throw new Exception("TaskItem not found");
 
-        await _auditService.LogAsync(
-            action: "Create",
-            entityName: "Comment",
-            entityId: comment.Id.ToString(),
-            changes: JsonSerializer.Serialize(CommentMapper.ToCommentDto(comment))
-        );
+                // Create comment linked to task
+            }
+            else if (dto.ProjectId.HasValue)
+            {
+                var projectExist = await _context.Projects
+                    .AnyAsync(p => p.Id == dto.ProjectId && p.TenantId == tenantId && !p.IsDeleted);
+                if (!projectExist)
+                    throw new Exception("Project not found");
 
-        return CommentMapper.ToCommentDto(comment);
+                // Create comment linked to project
+            }
+
+            var comment = dto.ToCommentModel();
+            comment.UserId = userId;
+            comment.TenantId = tenantId;
+
+            await _context.Comments.AddAsync(comment);
+            await _context.SaveChangesAsync();
+
+            await _auditService.LogAsync(
+                action: "Create",
+                entityName: "Comment",
+                entityId: comment.Id.ToString(),
+                changes: JsonSerializer.Serialize(CommentMapper.ToCommentDto(comment))
+            );
+
+            return CommentMapper.ToCommentDto(comment);
+        }
+        else
+        {
+            throw new Exception("Comment must belong to either a task or a project, but not both.");
+        }
     }
 
     public async Task<CommentDto> UpdateCommentAsync(Guid commentId, string userId, UpdateCommentDto dto)
     {
         if (dto == null) throw new ArgumentNullException(nameof(dto));
 
-        var comment = await _context.Comments.FindAsync(commentId);
-        if (comment == null)
+        await AuthorizeSameTenantAsync();
+        var tenantId = GetCurrentTenantId();
+
+        var existingComment = await _context.Comments
+            .FirstOrDefaultAsync(c => c.Id == commentId && c.TenantId == tenantId);
+
+        if (existingComment == null)
             throw new Exception("Comment not found");
 
         // original comment DTO before the update
-        var originalCommentDto = CommentMapper.ToCommentDto(comment);
+        var originalCommentDto = CommentMapper.ToCommentDto(existingComment);
 
         // now retrieve it again for tracking changes
-        var trackedComment = await _context.Comments.FirstOrDefaultAsync(c => c.Id == commentId);
+        var trackedComment = await _context.Comments
+            .FirstOrDefaultAsync(c => c.Id == commentId && c.TenantId == tenantId);
 
         // Only allow the original author to update the comment
         // if (comment.UserId != userId)
@@ -92,7 +136,7 @@ public class CommentService : ICommentService
 
         await _auditService.LogAsync(
             action: "UpdateComment",
-            entityName : "Comment",
+            entityName: "Comment",
             entityId: commentId.ToString(),
             changes: JsonSerializer.Serialize(auditData)
         );

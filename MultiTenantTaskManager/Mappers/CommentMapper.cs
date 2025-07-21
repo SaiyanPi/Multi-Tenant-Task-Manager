@@ -13,6 +13,7 @@ public static class CommentMapper
             Id = comment.Id,
             Content = comment.Content,
             UserId = comment.UserId,
+            TenantId = comment.TenantId,
             UserName = comment.User?.UserName ?? string.Empty, 
             CreatedAt = comment.CreatedAt,
             UpdatedAt = comment.UpdatedAt,
