@@ -13,7 +13,6 @@ namespace MultiTenantTaskManager.Controllers;
 // the service instead.)
 
 [ApiController]
-[Authorize]
 [Route("api/[controller]")]
 public class CommentsController : ControllerBase
 {
@@ -29,6 +28,7 @@ public class CommentsController : ControllerBase
         _tenantAccessor = tenantAccessor ?? throw new ArgumentNullException(nameof(tenantAccessor));
     }
 
+    [Authorize]
     [HttpPost]
     public async Task<IActionResult> AddComment([FromBody] CreateCommentDto dto)
     {
@@ -38,6 +38,7 @@ public class CommentsController : ControllerBase
         return Ok(comment);
     }
 
+    [Authorize]
     [HttpPut("{commentId}")]
     public async Task<IActionResult> UpdateComment(Guid commentId, [FromBody] UpdateCommentDto dto)
     {
@@ -46,6 +47,7 @@ public class CommentsController : ControllerBase
         return Ok(comment);
     }
 
+    [Authorize]
     [HttpDelete("{commentId}")]
     public async Task<IActionResult> DeleteComment(Guid commentId)
     {
@@ -54,6 +56,7 @@ public class CommentsController : ControllerBase
         return NoContent();
     }
 
+    [Authorize(Policy = "canManageProjects")]
     [HttpGet("task/{taskItemId}")]
     public async Task<ActionResult<IEnumerable<CommentDto>>> GetCommentsByTaskItemId(int taskItemId)
     {
@@ -62,6 +65,7 @@ public class CommentsController : ControllerBase
         return Ok(comments);
     }
 
+    [Authorize(Policy = "canManageProjects")]
     [HttpGet("project/{projectId}")]
     public async Task<ActionResult<IEnumerable<CommentDto>>> GetCommentsByProjectId(int projectId)
     {

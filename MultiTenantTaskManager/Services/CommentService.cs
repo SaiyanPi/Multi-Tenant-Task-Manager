@@ -146,9 +146,17 @@ public class CommentService : TenantAwareService, ICommentService
 
     public async Task<bool> DeleteCommentAsync(Guid commentId)
     {
-        var comment = await _context.Comments.FindAsync(commentId);
+        await AuthorizeSameTenantAsync();
+        var tenantId = GetCurrentTenantId();
+        var userId = _userAccessor.UserId.ToString();
+
+        var comment = await _context.Comments
+            .FirstOrDefaultAsync(c => c.Id == commentId && c.TenantId == tenantId);
         if (comment == null)
             return false;
+
+        if( comment.UserId != userId )
+            throw new Exception("You are not the author of this comment");
 
         // DTO before deletion
         var deletedCommentDto = CommentMapper.ToCommentDto(comment);
