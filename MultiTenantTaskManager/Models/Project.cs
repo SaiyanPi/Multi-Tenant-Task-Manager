@@ -19,11 +19,12 @@ public class Project : ISoftDeletable, IAuditable
 
 
     // Collection navigation property for related TaskItems
-    public ICollection<TaskItem> Tasks { get; set; } = new List<TaskItem>();
+    public ICollection<TaskItem> Tasks { get; set; } = new List<TaskItem>(); 
 
 
     // One-to-many: A project has many users
-    public ICollection<ApplicationUser> AssignedUsers { get; set; } = new List<ApplicationUser>();
+    public ICollection<ApplicationUser> AssignedUsers { get; set; } = new List<ApplicationUser>();  // collection navigation property from ApplicationUser
+
     public ProjectStatus Status { get; set; } = ProjectStatus.Unassigned;
     public DateTime? DueDate { get; set; }
     public DateTime CreatedAt { get; set; }

@@ -56,34 +56,41 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             .OnDelete(DeleteBehavior.Restrict); // this prevents cascading deletes from Tenant to TaskItem
                                                 // directly because we already have cascade delete from Tenant->Project->TaskItem
 
+        // one to many relationship: Project → ApplicationUsers (AssignedUsers)
         builder.Entity<ApplicationUser>()
             .HasOne(u => u.Project)
             .WithMany(p => p.AssignedUsers)
             .HasForeignKey(u => u.ProjectId)
             .OnDelete(DeleteBehavior.SetNull); // when project is deleted, clear reference/set ProjectId field to NULL
 
+        // one to one relationship: TaskItem → ApplicationUser (AssignedUser)
+        builder.Entity<TaskItem>()
+            .HasOne(t => t.AssignedUser)
+            .WithOne(u => u.AssignedTask)
+            .HasForeignKey<TaskItem>(t => t.AssignedUserId)
+            .OnDelete(DeleteBehavior.SetNull); // optional
 
-        
+
         // Comment -> Project
         builder.Entity<Comment>()
             .HasOne(c => c.Project)
             .WithMany(p => p.Comments)
             .HasForeignKey(c => c.ProjectId)
-            .OnDelete(DeleteBehavior.Restrict); // keeps comments even if the project is deleted(preserve history)
-        
+            .OnDelete(DeleteBehavior.SetNull); 
+
         // Comment -> TaskItem
         builder.Entity<Comment>()
             .HasOne(c => c.TaskItem)
             .WithMany(t => t.Comments)
             .HasForeignKey(c => c.TaskItemId)
-            .OnDelete(DeleteBehavior.Restrict);
+            .OnDelete(DeleteBehavior.SetNull);
 
         // Comment -> User(Author)
         builder.Entity<Comment>()
             .HasOne(c => c.User)
             .WithMany()
             .HasForeignKey(c => c.UserId)
-            .OnDelete(DeleteBehavior.Restrict); 
+            .OnDelete(DeleteBehavior.SetNull); 
 
         // Comment Properties
         builder.Entity<Comment>()

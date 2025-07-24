@@ -281,7 +281,7 @@ public class ProjectService : TenantAwareService, IProjectService
         }).ToList() ?? new();
         // ------------------
 
-        // set task properties after assigning user
+        // set Project properties after assigning user
         project.Status = ProjectStatus.Assigned;
         
         // set users properties after assigning users

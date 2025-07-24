@@ -25,9 +25,10 @@ public class TaskItem : ISoftDeletable, IAuditable
     public Tenant? Tenant { get; set; } = null!;
 
 
-    // task assign to user
-    public string? AssignedUserId { get; set; }  // Foreign key to Identity user
-    public ApplicationUser? AssignedUser { get; set; } // Navigation property
+    // one-to-one: task assign to user
+    public string? AssignedUserId { get; set; }  // Foreign key from ApplicationUser (choosing TaskItem to be dependent entity)
+    public ApplicationUser? AssignedUser { get; set; } // Reference Navigation property to a ApplicationUser
+
     public TaskItemStatus Status { get; set; } = TaskItemStatus.Unassigned;
     public DateTime? DueDate { get; set; }
     public DateTime CreatedAt { get; set; }

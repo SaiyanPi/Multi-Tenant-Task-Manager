@@ -225,6 +225,15 @@ public class TaskItemService : TenantAwareService, ITaskItemService
         if (user == null || user.TenantId != tenantId)
             throw new UnauthorizedAccessException("Invalid user for assignment.");
 
+        // check if the user is already assigned to other task
+        var alreadyAssignedTask = await _context.TaskItems
+            .FirstOrDefaultAsync(t => t.AssignedUserId == user.Id && t.TenantId == tenantId && !t.IsDeleted);
+        if (user.AssignedTask != null && user.AssignedTask.Id != task.Id)
+        {
+            var assignedTaskTitle = alreadyAssignedTask != null ? alreadyAssignedTask.Titles : "Unknown";
+            throw new InvalidOperationException($"User is already assigned to task: {assignedTaskTitle}.");
+        }
+
         // prevent other user except member and special member from getting assigned
         var userRole = await _userManager.GetRolesAsync(user);
         if (!userRole.Contains(AppRoles.Member) && !userRole.Contains(AppRoles.SpecialMember))

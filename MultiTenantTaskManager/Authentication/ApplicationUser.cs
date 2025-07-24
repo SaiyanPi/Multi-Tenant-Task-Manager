@@ -12,11 +12,15 @@ public class ApplicationUser : IdentityUser, ISoftDeletable
 
     // Reference navigation property to Tenant
     public Tenant? Tenant { get; set; }
+
+    // user assignment to a task
+    public TaskItem? AssignedTask { get; set; } // reference navigation property to a TaskItem
+
     
-    
-    // user assignment
-    public int? ProjectId { get; set; } // nullable for unassigned users
-    public Project? Project { get; set; } // navigation
+    // user assignment to a project
+    public int? ProjectId { get; set; } // foreign key from Project
+    public Project? Project { get; set; } // reference navigation property to a Project
+
     public string? RoleInProject { get; set; } // AppRoles.Member or AppRoles.SpecialMember pr AppRoles.Manager
 
 

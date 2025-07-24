@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using MultiTenantTaskManager.Data;
 
@@ -11,9 +12,11 @@ using MultiTenantTaskManager.Data;
 namespace MultiTenantTaskManager.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250723165616_UpdateTaskUserAndSetNull")]
+    partial class UpdateTaskUserAndSetNull
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -163,6 +166,9 @@ namespace MultiTenantTaskManager.Migrations
                     b.Property<int>("AccessFailedCount")
                         .HasColumnType("int");
 
+                    b.Property<int?>("AssignedTaskId")
+                        .HasColumnType("int");
+
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
                         .HasColumnType("nvarchar(max)");
@@ -226,6 +232,10 @@ namespace MultiTenantTaskManager.Migrations
                         .HasColumnType("nvarchar(256)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("AssignedTaskId")
+                        .IsUnique()
+                        .HasFilter("[AssignedTaskId] IS NOT NULL");
 
                     b.HasIndex("NormalizedEmail")
                         .HasDatabaseName("EmailIndex");
@@ -474,9 +484,7 @@ namespace MultiTenantTaskManager.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("AssignedUserId")
-                        .IsUnique()
-                        .HasFilter("[AssignedUserId] IS NOT NULL");
+                    b.HasIndex("AssignedUserId");
 
                     b.HasIndex("ProjectId");
 
@@ -565,6 +573,11 @@ namespace MultiTenantTaskManager.Migrations
 
             modelBuilder.Entity("MultiTenantTaskManager.Authentication.ApplicationUser", b =>
                 {
+                    b.HasOne("MultiTenantTaskManager.Models.TaskItem", "AssignedTask")
+                        .WithOne()
+                        .HasForeignKey("MultiTenantTaskManager.Authentication.ApplicationUser", "AssignedTaskId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("MultiTenantTaskManager.Models.Project", "Project")
                         .WithMany("AssignedUsers")
                         .HasForeignKey("ProjectId")
@@ -574,6 +587,8 @@ namespace MultiTenantTaskManager.Migrations
                         .WithMany("Users")
                         .HasForeignKey("TenantId")
                         .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("AssignedTask");
 
                     b.Navigation("Project");
 
@@ -619,9 +634,8 @@ namespace MultiTenantTaskManager.Migrations
             modelBuilder.Entity("MultiTenantTaskManager.Models.TaskItem", b =>
                 {
                     b.HasOne("MultiTenantTaskManager.Authentication.ApplicationUser", "AssignedUser")
-                        .WithOne("AssignedTask")
-                        .HasForeignKey("MultiTenantTaskManager.Models.TaskItem", "AssignedUserId")
-                        .OnDelete(DeleteBehavior.SetNull);
+                        .WithMany()
+                        .HasForeignKey("AssignedUserId");
 
                     b.HasOne("MultiTenantTaskManager.Models.Project", "Project")
                         .WithMany("Tasks")
@@ -640,11 +654,6 @@ namespace MultiTenantTaskManager.Migrations
                     b.Navigation("Project");
 
                     b.Navigation("Tenant");
-                });
-
-            modelBuilder.Entity("MultiTenantTaskManager.Authentication.ApplicationUser", b =>
-                {
-                    b.Navigation("AssignedTask");
                 });
 
             modelBuilder.Entity("MultiTenantTaskManager.Models.Project", b =>
