@@ -56,7 +56,7 @@ public class CommentsController : ControllerBase
         return NoContent();
     }
 
-    [Authorize(Policy = "canManageProjects")]
+    [Authorize(Policy = "canViewTasks")]
     [HttpGet("task/{taskItemId}")]
     public async Task<ActionResult<IEnumerable<CommentDto>>> GetCommentsByTaskItemId(int taskItemId)
     {
@@ -65,7 +65,7 @@ public class CommentsController : ControllerBase
         return Ok(comments);
     }
 
-    [Authorize(Policy = "canManageProjects")]
+    [Authorize(Policy = "canViewTasks")]
     [HttpGet("project/{projectId}")]
     public async Task<ActionResult<IEnumerable<CommentDto>>> GetCommentsByProjectId(int projectId)
     {
