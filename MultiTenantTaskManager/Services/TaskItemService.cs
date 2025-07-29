@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using MultiTenantTaskManager.Accessor;
 using MultiTenantTaskManager.Authentication;
 using MultiTenantTaskManager.Data;
+using MultiTenantTaskManager.DTOs.Notification;
 using MultiTenantTaskManager.DTOs.TaskItem;
 using MultiTenantTaskManager.Enums;
 using MultiTenantTaskManager.Helpers;
@@ -254,7 +255,12 @@ public class TaskItemService : TenantAwareService, ITaskItemService
         // call SignalR notification
         var userId = user.Id;
         var taskTitle = task.Titles;
-        await _notificationService.SendNotificationAsync(userId, "New Task Assigned", $"You've been assigned to task '{taskTitle}'");
+        var userAssignDto = new NotificationDto
+        {
+            Title = "Task Assigned",
+            Message = $"You have been assigned to task '{taskTitle}'.",
+        };
+        await _notificationService.SendNotificationAsync(userId, userAssignDto);
         // ------
 
         //  --- auditlog ---

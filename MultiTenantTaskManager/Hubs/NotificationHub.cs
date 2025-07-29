@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.SignalR;
 using MultiTenantTaskManager.Accessor;
+using MultiTenantTaskManager.DTOs.Notification;
 using MultiTenantTaskManager.Services;
 
 namespace MultiTenantTaskManager.Hubs;
@@ -22,13 +23,16 @@ public class NotificationHub : Hub
     public override Task OnConnectedAsync()
     {
         var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-       
+
         Console.WriteLine($"Connected SignalR user: {userId}");
 
         return base.OnConnectedAsync();
     }
 
+
     // takes a data from client when clicked 'Mark as read' button
+    // Notification still works without this class because SignalR's default implementation already uses:
+    // connection.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value
     public async Task MarkAsRead(Guid notificationId)
     {
 
@@ -51,7 +55,7 @@ public class NotificationHub : Hub
 
         // call the service method to update DB via service
         // await _notificationService.MarkAsReadAsync(notificationId, userId);
-        
+
         await _notificationService.MarkAsReadAsync(Guid.Parse(tenantId), userId, notificationId);
 
 
@@ -63,7 +67,9 @@ public class NotificationHub : Hub
                 IsRead = true
             });
     }
+
+
+
+
 }
 
-// Notification still works without this class because SignalR's default implementation already uses:
-// connection.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value

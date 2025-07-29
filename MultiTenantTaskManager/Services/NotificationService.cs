@@ -25,19 +25,50 @@ public class NotificationService : INotificationService
         _context = context;
     }
 
-    public async Task SendNotificationAsync(string userId, string title, string message)
+    // public async Task SendNotificationAsync(string userId, string title, string message)
+    // {
+    //     var userTenant = _context.Users
+    //         .Where(u => u.Id == userId)
+    //         .Select(u => u.TenantId)
+    //         .FirstOrDefault();
+
+    //     var notification = new Notification
+    //     {
+    //         UserId = userId,
+    //         Title = title,
+    //         Message = message,
+    //         TenantId = userTenant
+    //     };
+
+    //     _context.Notifications.Add(notification);
+    //     await _context.SaveChangesAsync();
+
+    //     // Send to SignalR
+    //     // await _hubContext.Clients.User(userId).SendAsync("ReceiveNotification", new
+    //     // {
+    //     //     notification.Id,
+    //     //     notification.Title,
+    //     //     notification.Message,
+    //     //     notification.CreatedAt
+    //     // });
+    //     // await _hubContext.Clients.User(userId).SendAsync("ReceiveNotification", notification.ToNotificationDto());
+    //     await _hubContext.Clients.User(userId).SendAsync("ReceiveNotification", NotificationMapper.ToNotificationDto(notification));
+
+    // }
+
+    public async Task SendNotificationAsync(string userId, object dto)
     {
         var userTenant = _context.Users
             .Where(u => u.Id == userId)
             .Select(u => u.TenantId)
-            .FirstOrDefault();
+            .FirstOrDefault();  
 
         var notification = new Notification
         {
             UserId = userId,
-            Title = title,
-            Message = message,
-            TenantId = userTenant
+            Title = (dto as NotificationDto)?.Title ?? "Untitled",
+            Message = (dto as NotificationDto)?.Message ?? "",
+            TenantId = userTenant,
         };
 
         _context.Notifications.Add(notification);
@@ -52,10 +83,10 @@ public class NotificationService : INotificationService
         //     notification.CreatedAt
         // });
         // await _hubContext.Clients.User(userId).SendAsync("ReceiveNotification", notification.ToNotificationDto());
-        await _hubContext.Clients.User(userId).SendAsync("ReceiveNotification", NotificationMapper.ToNotificationDto(notification));
-
+        // await _hubContext.Clients.User(userId).SendAsync("ReceiveNotification", NotificationMapper.ToNotificationDto(notification));
+        await _hubContext.Clients.User(userId).SendAsync("ReceiveNotification", dto);
     }
-
+    
     public async Task<IEnumerable<NotificationDto>> GetUserNotificationsAsync(Guid tenantId, string userId)
     {
         var notifications = await _context.Notifications

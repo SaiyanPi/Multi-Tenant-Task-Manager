@@ -10,4 +10,5 @@ public class Notification
 
     // Optional: to filter by tenantId
     public Guid? TenantId { get; set; }
+    
 }

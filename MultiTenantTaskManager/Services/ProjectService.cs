@@ -8,6 +8,7 @@ using MultiTenantTaskManager.Accessor;
 using MultiTenantTaskManager.Authentication;
 using MultiTenantTaskManager.Data;
 using MultiTenantTaskManager.DTOs;
+using MultiTenantTaskManager.DTOs.Notification;
 using MultiTenantTaskManager.DTOs.Project;
 using MultiTenantTaskManager.Enums;
 using MultiTenantTaskManager.Helpers;
@@ -295,9 +296,14 @@ public class ProjectService : TenantAwareService, IProjectService
 
         // call SignalR notification
         var projectName = project.Name;
+        var userAssignDto = new NotificationDto
+        {
+            Title = "Project Assigned",
+            Message = $"You have been assigned to project '{projectName}'.",
+        };
         foreach (var userId in userIds)
         {
-            await _notificationService.SendNotificationAsync(userId, "New Project Assigned", $"You've been assigned to project '{projectName}'");
+            await _notificationService.SendNotificationAsync(userId, userAssignDto);
         }
 
         // auditlog

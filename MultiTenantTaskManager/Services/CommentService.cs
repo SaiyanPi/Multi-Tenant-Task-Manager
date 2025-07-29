@@ -3,11 +3,14 @@ using System.Text.Json;
 using DTOs.Comment;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using MultiTenantTaskManager.Accessor;
 using MultiTenantTaskManager.Authentication;
 using MultiTenantTaskManager.Data;
 using MultiTenantTaskManager.DTOs.Comment;
+using MultiTenantTaskManager.DTOs.Notification;
+using MultiTenantTaskManager.Hubs;
 using MultiTenantTaskManager.Mappers;
 
 namespace MultiTenantTaskManager.Services;
@@ -19,6 +22,7 @@ public class CommentService : TenantAwareService, ICommentService
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IUserAccessor _userAccessor;
     private readonly IAuditService _auditService;
+    private readonly INotificationService _notificationService;
 
     public CommentService(
         ApplicationDbContext context,
@@ -27,15 +31,16 @@ public class CommentService : TenantAwareService, ICommentService
         IAuthorizationService authorizationService,
         UserManager<ApplicationUser> userManager,
         IUserAccessor userAccessor,
-        IAuditService auditService) 
+        IAuditService auditService,
+        INotificationService notificationService)
         : base(user, tenantAccessor, authorizationService)
     {
         _context = context;
         _userManager = userManager;
         _userAccessor = userAccessor;
         _auditService = auditService;
+        _notificationService = notificationService;
     }
-
     public async Task<CommentDto> AddCommentAsync(CreateCommentDto dto, string userId, Guid tenantId)
     {
         if (dto == null) throw new ArgumentNullException(nameof(dto));
@@ -70,6 +75,70 @@ public class CommentService : TenantAwareService, ICommentService
 
             await _context.Comments.AddAsync(comment);
             await _context.SaveChangesAsync();
+
+            // ------ trigger comment notification ---------
+
+            // Step 1: Listing target users to notify
+            List<string> targetUserIds = new();
+
+            if (dto.TaskItemId.HasValue)
+            {
+                targetUserIds = await _context.TaskItems
+                    .Where(t => t.Id == dto.TaskItemId)
+                    .Select(t => t.AssignedUserId)
+                    .Where(id => id != null && id != userId)
+                    .Cast<string>()
+                    .ToListAsync();
+            }
+
+            else if (dto.ProjectId.HasValue)
+            {
+                targetUserIds = await _context.Projects
+                    .Where(p => p.Id == dto.ProjectId)
+                    .SelectMany(p => p.AssignedUsers)
+                    .Where(user => user.Id != userId)
+                    .Select(user => user.Id)
+                    .ToListAsync();
+            }
+
+            // Step 2: Send real-time notification
+            var SenderName = await _context.Users
+                .Where(u => u.Id == userId && u.TenantId == tenantId && !u.IsDeleted)
+                .Select(u => u.Email)
+                .FirstOrDefaultAsync();
+
+            var taskItemName = await _context.TaskItems
+                .Where(t => t.Id == dto.TaskItemId && t.TenantId == tenantId && !t.IsDeleted)
+                .Select(p => p.Titles)
+                .FirstOrDefaultAsync();
+            var projectName = await _context.Projects
+                .Where(p => p.Id == dto.ProjectId && p.TenantId == tenantId && !p.IsDeleted)
+                .Select(p => p.Name)
+                .FirstOrDefaultAsync();
+            
+            var commentDto = new CommentNotificationDto
+            {
+                CommentId = comment.Id,
+                Title = "New Comment Added",
+                SenderName = SenderName ?? "Unknown",
+                Content = comment.Content,  // for displaying in notification
+                Message = "New Comment",    // for saving in db
+                TaskItemId = comment.TaskItemId,
+                TaskName = taskItemName,
+                ProjectName = projectName,
+                ProjectId = comment.ProjectId,
+                Type = "comment"  // this is already set in the constructor of CommentNotificationDto
+            };
+
+Console.WriteLine(JsonSerializer.Serialize(commentDto));
+            // call SignalR notification
+            foreach (var targetUserId in targetUserIds)
+            {
+                await _notificationService.SendNotificationAsync(targetUserId, commentDto);
+            }
+
+            // --------------------------------------
+
 
             await _auditService.LogAsync(
                 action: "Create",

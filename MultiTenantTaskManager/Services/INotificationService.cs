@@ -4,8 +4,8 @@ namespace MultiTenantTaskManager.Services;
 
 public interface INotificationService
 {
-    Task SendNotificationAsync(string userId, string title, string message);
-
+    // Task SendNotificationAsync(string userId, string title, string message);
+    Task SendNotificationAsync(string userId, object dto);
 
     // notification endpoints
 
@@ -31,9 +31,10 @@ public interface INotificationService
 
     //      Task MarkAsReadAsync(Guid notificationId);
 
-
+    
     Task<IEnumerable<NotificationDto>> GetUserNotificationsAsync(Guid tenantId, string userId);
     Task MarkAsReadAsync(Guid tenantId, string userId, Guid notificationId);
+
 
     Task<IEnumerable<NotificationDto>> GetAllNotificationsAsync(); // for superadmin
     Task<IEnumerable<NotificationDto>> GetUnreadNotificationsAsync(); //for superadmin

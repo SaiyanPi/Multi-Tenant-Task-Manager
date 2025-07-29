@@ -18,11 +18,23 @@ connection.on("ReceiveNotification", (notification: any) => {
   const ul = document.getElementById("notifications")!;
   const li = document.createElement("li");
 
+  const maxLength = 50;
+  let preview = notification.content || "";
+  if (preview.length > maxLength) {
+      preview = preview.substring(0, maxLength) + "...";
+  }
   // Set the element ID for later lookup
   li.id = `notification-${notification.id}`;
   
-  li.textContent = `[${new Date(notification.createdAt).toLocaleTimeString()}] ${notification.title}: ${notification.message}`;
-  
+  // li.textContent = `[${new Date(notification.createdAt).toLocaleTimeString()}] ${notification.title}: ${notification.message}`;
+  const type = (notification.type || "general").toLowerCase();
+  // console.log("Notification Type:", type);
+  if (type === "comment") {
+    li.innerHTML = `💬 New comment on <strong>${notification.projectName || notification.taskName}</strong> by <em>${notification.senderName}</em>:<br>${preview}`;
+  } else {
+    li.textContent = `[${new Date(notification.createdAt).toLocaleTimeString()}] ${notification.title}: ${notification.message}`;
+  }
+
   // Add "Mark as Read" button
   const button = document.createElement("button");
   button.textContent = "Mark as Read";
@@ -33,12 +45,15 @@ connection.on("ReceiveNotification", (notification: any) => {
         li.classList.add("read");
         li.style.opacity = "0.5";
         li.style.textDecoration = "line-through";
-
+      
         // Remove the button to prevent duplicate clicks
         button.remove();
       })
       .catch(err => console.error("Error marking as read:", err));
+
   };
+  console.log(`Notification ID: ${notification.id} `);
+
 
   li.appendChild(button);
   ul.prepend(li);

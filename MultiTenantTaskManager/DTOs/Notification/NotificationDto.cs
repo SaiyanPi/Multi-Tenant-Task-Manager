@@ -11,4 +11,9 @@ public class NotificationDto
 
     // Optional: to filter by tenantId
     public Guid? TenantId { get; set; }
+
+    // NEW: Type of notification (e.g. comment, assignment etc.)
+    public string Type { get; set; } = "generic";
+
+  
 }
