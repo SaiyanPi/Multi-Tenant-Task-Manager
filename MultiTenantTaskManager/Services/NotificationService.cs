@@ -74,6 +74,17 @@ public class NotificationService : INotificationService
         _context.Notifications.Add(notification);
         await _context.SaveChangesAsync();
 
+        // Inject saved Notification.Id & timestamps back into the DTO
+        if (dto is NotificationDto enrichedDto)
+        {
+            enrichedDto.Id = notification.Id;             // Real ID from DB
+            enrichedDto.CreatedAt = notification.CreatedAt;
+            enrichedDto.TenantId = userTenant;
+        }
+
+        // Console.WriteLine($"object: {dto}");
+
+
         // Send to SignalR
         // await _hubContext.Clients.User(userId).SendAsync("ReceiveNotification", new
         // {

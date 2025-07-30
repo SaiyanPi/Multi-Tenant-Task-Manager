@@ -3792,13 +3792,14 @@ connection.on("ReceiveNotification", (notification) => {
     li.id = `notification-${notification.id}`;
     // li.textContent = `[${new Date(notification.createdAt).toLocaleTimeString()}] ${notification.title}: ${notification.message}`;
     const type = (notification.type || "general").toLowerCase();
-    // console.log("Notification Type:", type);
+    console.log("Notification Type:", type);
     if (type === "comment") {
         li.innerHTML = `💬 New comment on <strong>${notification.projectName || notification.taskName}</strong> by <em>${notification.senderName}</em>:<br>${preview}`;
     }
     else {
         li.textContent = `[${new Date(notification.createdAt).toLocaleTimeString()}] ${notification.title}: ${notification.message}`;
     }
+    console.log("Received Notification:", notification);
     // Add "Mark as Read" button
     const button = document.createElement("button");
     button.textContent = "Mark as Read";
@@ -3813,14 +3814,13 @@ connection.on("ReceiveNotification", (notification) => {
             button.remove();
         })
             .catch(err => console.error("Error marking as read:", err));
+        console.log(`Notification ID: ${notification.id} `);
     };
-    console.log(`Notification ID: ${notification.id} `);
     li.appendChild(button);
     ul.prepend(li);
 });
 // Handle real-time IsRead update
-connection
-    .on("NotificationReadUpdated", (update) => {
+connection.on("NotificationReadUpdated", (update) => {
     console.log(`Notification ${update.NotificationId} marked as read in real-time.`);
     const li = document.getElementById(`notification-${update.NotificationId}`);
     if (li) {

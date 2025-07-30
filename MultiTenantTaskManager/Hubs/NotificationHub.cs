@@ -53,6 +53,7 @@ public class NotificationHub : Hub
         }
 
 
+
         // call the service method to update DB via service
         // await _notificationService.MarkAsReadAsync(notificationId, userId);
 
