@@ -1,13 +1,14 @@
 # About this project
 
-Hello. This is a project i am engaging in currently. I am having a fun building this process. Though I've not implemented any specific WEB API Design patterns, it's great. The main reason why it's great for me is that i can play a lot. Instead of sticking to just one practice for implementing feature or refining it, i can explore different patterns. So codes are a bit
-inconsistent in some area but again my main objective building this project is to learn.
+This project is me implementing my knowledge in Web API development with ASP.NET Core, EF Core, and SignalR in practical. My main objective building this project is to learn as I have not implemented any specific WEB API Design patterns. There is also a code inconsistency in few areas so if you are someone referencing my code please follow the general pattern.
+For the realtime Client notification, Simple TypeScript application is used.
 
 
 # Multi-Tenant Task Manager
 
-A multi-tenant task management application built with ASP.NET Core and Entity Framework.
-
+A multi-tenant task management application with real time SignalR notification built with ASP.NET Core, Entity Framework, and TypeScript. 
+📁 MultiTenantTaskManager - Server
+📁 NotificationClient - Client for real time notification
 
 ## Features
 
@@ -25,6 +26,8 @@ A multi-tenant task management application built with ASP.NET Core and Entity Fr
 - JWT Authentication
 - SQL Server
 - FluentValidation
+- SignalR
+- TypeScript 
 
 
 ## Design Overview 
