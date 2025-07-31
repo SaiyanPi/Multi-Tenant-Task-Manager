@@ -1,6 +1,7 @@
 # About this project
 
 This project is me implementing my knowledge in Web API development with ASP.NET Core, EF Core, and SignalR in practical. My main objective building this project is to learn as I have not implemented any specific WEB API Design patterns. There is also a code inconsistency in few areas so if you are someone referencing my code please follow the general pattern.
+
 For the realtime Client notification, Simple TypeScript application is used.
 
 
