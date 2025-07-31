@@ -9,6 +9,7 @@ For the realtime Client notification, Simple TypeScript application is used.
 A multi-tenant task management application with real time SignalR notification built with ASP.NET Core, Entity Framework, and TypeScript. 
 
 📁 MultiTenantTaskManager - Server
+
 📁 NotificationClient - Client for real time notification
 
 ## Features
