@@ -16,9 +16,10 @@ A multi-tenant task management application with real time SignalR notification b
 
 - Multi-tenant architecture
 - Role and policy based authorization
-- Task and Project management
-- Activity logging
+- Task, Project, and Tenant management
+- User's Activity logging
 - EF Core with soft delete
+- Real time SignalR notification for comment and assignments
 
 
  ## Tech Stack
